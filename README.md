@@ -14,6 +14,10 @@ seçilir. Program, Mersin Üniversitesi ÖİDB web sitesi için yapılan staj ç
 ([mehmetfatihvar/staj](https://github.com/mehmetfatihvar/staj)) doğdu; ÖİDB hazır profil olarak
 gelir.
 
+> 📘 **Ayrıntılı kullanım kılavuzu:** [docs/KULLANIM_KILAVUZU.pdf](docs/KULLANIM_KILAVUZU.pdf) ·
+> [Word](docs/KULLANIM_KILAVUZU.docx). Kurulum, arayüz, bütün adımlar, raporların nasıl okunacağı,
+> ayarlar ve sorun giderme; gerçek ekran görüntüleriyle (42 sayfa).
+
 ---
 
 ## 1. Kurulum (başka bir bilgisayarda)
@@ -232,6 +236,7 @@ web-denetim-merkezi/
 ├── bologna-scraper/               OİBS Bologna → PostgreSQL (Go)
 ├── profiller/                     Site profilleri (meu-oidb.json hazır)
 ├── data/meu-oidb/                 ÖİDB site haritası (17.394 sayfa) ve şablon kümeleri
+├── docs/                          Kullanım kılavuzu (Word, PDF) ve kaynağı (docs/kaynak)
 ├── tests/                         Birim ve sözleşme testleri
 └── ciktilar/<profil>/             Bütün çıktılar (git'e girmez)
     ├── kesif/site_haritasi.json

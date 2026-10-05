@@ -10,3 +10,7 @@ ciktilar/
 
 # Bologna derleme çıktısı
 bologna-scraper/bin/
+
+# Kılavuz üretimi sırasında oluşan geçici dosyalar
+docs/kaynak/taslak.*
+docs/kaynak/*.json
