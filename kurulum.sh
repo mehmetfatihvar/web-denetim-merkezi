@@ -23,8 +23,11 @@ else
 fi
 echo "[2/3] Python paketleri kuruluyor..."
 .venv/bin/python -m pip install --disable-pip-version-check -q --upgrade pip
-.venv/bin/python -m pip install --disable-pip-version-check -r requirements.txt
+.venv/bin/python -m pip install --disable-pip-version-check -r requirements.txt || {
+    echo "[HATA] Paketler kurulamadı. İnternet bağlantısını / proxy ayarlarını kontrol edin."; exit 1; }
 echo "[3/3] Chromium tarayıcısı indiriliyor..."
-.venv/bin/python -m playwright install chromium
+.venv/bin/python -m playwright install chromium || {
+    echo "[HATA] Chromium indirilemedi (cdn.playwright.dev). İnternet bağlantısını / proxy ayarlarını"
+    echo "       kontrol edip ./kurulum.sh'yi tekrar çalıştırın."; exit 1; }
 echo
 echo "Kurulum tamam. Programı ./baslat.sh ile açın."

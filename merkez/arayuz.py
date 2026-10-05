@@ -382,12 +382,16 @@ class Uygulama:
         kc = KaydirmaliCerceve(self.icerik)
         f = kc.ic
         self.uyari_karti = ttk.Frame(f, style="Card.TFrame", padding=(16, 12))
-        self.uyari_metni = ttk.Label(self.uyari_karti, text="", style="Uyari.TLabel", justify="left")
-        self.uyari_metni.pack(side="left", anchor="w")
+        # önce düğmeler: metin uzunsa düğmeler değil metin sarılır
         ttk.Button(self.uyari_karti, text="Ortam kontrolü", command=lambda: self._baslat(["ortam"])
-                   ).pack(side="right")
+                   ).pack(side="right", anchor="n")
         ttk.Button(self.uyari_karti, text="▶  Bağımlılıkları kur", style="Accent.TButton",
-                   command=lambda: self._baslat(["kurulum", "ortam"])).pack(side="right", padx=6)
+                   command=lambda: self._baslat(["kurulum", "ortam"])).pack(side="right", anchor="n", padx=6)
+        self.uyari_metni = ttk.Label(self.uyari_karti, text="", style="Uyari.TLabel", justify="left",
+                                     wraplength=600)
+        self.uyari_metni.pack(side="left", anchor="w", fill="x", expand=True)
+        self.uyari_metni.bind("<Configure>", lambda e: self.uyari_metni.configure(
+            wraplength=max(e.width - 10, 200)))
         self.kutu_cercevesi = ttk.Frame(f)
         self.kutu_cercevesi.pack(fill="x", pady=(0, 12))
 
