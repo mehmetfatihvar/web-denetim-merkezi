@@ -22,7 +22,7 @@ ILERLEME_DESENLERI = [
 HATA_DESENLERI = [
     re.compile(r"Traceback \(most recent call last\)"),
     re.compile(r"^\s*[\w.]*(?:Error|Exception)(?::|$)"),     # Python istisna son satırı
-    re.compile(r"\[HATA\]|\bHATA\b|❌|⛔|✖"),
+    re.compile(r"\[HATA\]|^\s*HATA\s*:|❌|⛔|✖"),      # "HATA TÜRÜ" gibi başlıklar sayılmaz
     re.compile(r"\blevel=ERROR\b"),
     re.compile(r"^(?:error|fatal|panic)\b[:\s]", re.IGNORECASE),
     re.compile(r"\bno space left on device\b", re.IGNORECASE),

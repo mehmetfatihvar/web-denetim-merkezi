@@ -275,7 +275,8 @@ class IzlemeTestleri(unittest.TestCase):
         self.assertEqual(sorun_turu("time=x level=WARN msg=503"), "uyari")
         # olağan çıktılar sorun sayılmaz
         for satir in ("  [3/10] FAIL  404  https://x", "    450 sayfa | kuyruk 3 | hata 0",
-                      "ilerleme biten=1 toplam=2 hata=0", "Kırık link     : 12", ""):
+                      "ilerleme biten=1 toplam=2 hata=0", "Kırık link     : 12",
+                      "1) HATA TÜRÜ BAŞINA İSABET (hakem aynı dilimde aynı türü buldu mu?)", ""):
             self.assertIsNone(sorun_turu(satir), satir)
 
     def test_satir_bolucu_ve_sure(self):
