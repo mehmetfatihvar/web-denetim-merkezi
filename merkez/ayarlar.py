@@ -56,6 +56,14 @@ PROFIL_VARSAYILAN = {
     "temsilci_sayisi": 3,
     "rota_limit": 0,
     "tiklama_limit": 40,
+    # Görsel doğrulama ve düzeltme (gorsel-denetim 7-10. aşamalar)
+    "etiket_ornek": 30,
+    "etiket_csv": "",            # boş = İndirilenler/etiketler.csv
+    "css_oneri": "",             # boş = otomatik düzeltmenin oneri.css'i, yoksa tools/visual_audit/oneri.css
+    "oto_limit": 200,
+    "oto_cihaz": "mobile",
+    "oto_tur": 4,
+    "oto_goruntu": 12,
     # Bologna (OİBS kullanan herhangi bir üniversite)
     "bologna_url": "https://obs.mersin.edu.tr/oibs/bologna/",
     "bologna_program": "1371",
@@ -262,4 +270,11 @@ class Klasorler:
         self.teslim = self.kok / "TESLIM"
         self.kayitlar = self.kok / "merkez_kayitlari"
         self.temsilciler = self.veri / "template_representatives.json"
+        # Görsel doğrulama ve düzeltme
+        self.dogrulama = self.kok / "dogrulama"
+        self.dogrulama_css = self.kok / "dogrulama_css"
+        self.dogrulama_cikti = self.ai_kok / "dogrulama_cikti"
+        self.etiket = self.ai_kok / "etiket"
+        self.css_cikti = self.ai_kok / "css_cikti"
+        self.oto = self.ai_kok / "oto_cikti"
         self.kumeler = self.veri / "template_clusters.json"

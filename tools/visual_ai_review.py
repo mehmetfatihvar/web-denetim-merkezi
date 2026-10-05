@@ -49,6 +49,7 @@ import json
 import os
 import sys
 import urllib.request
+from urllib.parse import urlparse
 from collections import Counter
 from datetime import datetime
 
@@ -58,7 +59,7 @@ from tester_v3_evidence import (  # noqa: E402
     DESKTOP_VIEWPORT, MOBILE_VIEWPORT, BASE_URL, site_base,
 )
 
-SITE_NAME = "MEÜ ÖİDB"
+SITE_NAME = ""          # --site-adi; verilmezse alan adı
 LOCALE = "tr-TR"
 
 try:
@@ -261,7 +262,9 @@ async def run(opts):
             except Exception:
                 pass
     counts, vocab = load_cluster_counts(src)
-    meta = {"base": site_base(urls[0]) if urls else BASE_URL, "date": datetime.now().strftime("%Y-%m-%d %H:%M"), "model": opts.model}
+    base = site_base(urls[0]) if urls else BASE_URL
+    SITE_NAME = SITE_NAME or urlparse(base).netloc or "Web sitesi"
+    meta = {"base": base, "date": datetime.now().strftime("%Y-%m-%d %H:%M"), "model": opts.model}
     csv_path = write_csv(results)
     html_path = safe_write(os.path.join(OUT_DIR, "gorsel_ai_rapor.html"),
                            build_ai_report(results, meta, (counts, vocab)))

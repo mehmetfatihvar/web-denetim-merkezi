@@ -104,6 +104,19 @@ def ozet(ayar: dict) -> List[Tuple[str, str, str]]:
                   f'{karar.get("KESIN", 0)} / {karar.get("INCELE", 0)}'))
     if k.metin_csv.exists():
         s.append(("Yapay zekâ", "Metin kodlama bulgusu", str(len(csv_satirlari(k.metin_csv)))))
+    sonuc = k.dogrulama_cikti / "sonuc.csv"
+    if sonuc.exists():
+        karar = Counter(r.get("karar") for r in csv_satirlari(sonuc))
+        s.append(("Doğrula ve düzelt", "Canlı doğrulama",
+                  ", ".join(f"{a}: {n}" for a, n in karar.most_common())))
+    kok = k.dogrulama_cikti / "kok_neden.csv"
+    if kok.exists():
+        s.append(("Doğrula ve düzelt", "Kök neden (tek düzeltme, çok sayfa)", str(len(csv_satirlari(kok)))))
+    turlar = k.oto / "turlar.csv"
+    if turlar.exists():
+        son = (csv_satirlari(turlar) or [{}])[-1]
+        s.append(("Doğrula ve düzelt", "Otomatik düzeltme (son tur)",
+                  ", ".join(f"{a}: {v}" for a, v in son.items() if v not in (None, ""))))
     return s
 
 
@@ -162,6 +175,8 @@ def yol_haritasi(ayar: dict):
         ("Yapay zekâ görsel denetimi", "Ekran görüntüleri modellere sorulur, son rapor üretilir.",
          ["ai_tarama", "ai_temsilci", "ai_yeniden", "ai_analiz", "ai_hakem", "ai_isabet",
           "ai_metin", "ai_rapor"], lambda: (_var("ai_rapor", ayar), "")),
+        ("Doğrula ve düzelt", "Bulgular canlı sitede doğrulanır, taşma için CSS önerisi üretilir.",
+         ["gd_dogrulama", "gd_oto"], None),
         ("Teslim paketi", "Bütün rapor ve veriler tek klasörde toplanır.", ["teslim"],
          lambda: (_var("teslim", ayar), "")),
     ]

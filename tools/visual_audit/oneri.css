@@ -1,0 +1,40 @@
+/* Geliştiriciye önerilen mobil taşma düzeltmesi.
+   tester.py --css ile her sayfaya eklenip etkisi ölçülür (css_deneme.py). */
+
+/* 1) Editörden gelen içerikte bölünmeyen uzun URL ve kelimeler satır sonunda bölünsün */
+.prose, .prose * {
+  overflow-wrap: anywhere;
+}
+
+/* 1b) İçerik alanı dışında kalan uzun linkler ve başlıklar (1. denemede kalan
+       a.text-primary.underline ve h1 taşmaları); nowrap ile gelen link metni de bölünsün */
+a.text-primary, h1, h2, h3 {
+  overflow-wrap: anywhere;
+}
+.prose a, a.text-primary.underline {
+  white-space: normal;
+}
+
+/* 1c) İkon + metin satırları (p.flex): flex öğesi varsayılan olarak içeriğinden
+       daralamaz; uzun metin (e-posta, URL) bölünebilsin diye min-width sıfırlanır */
+p.flex > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* 2) Geniş tablolar sayfayı değil kendi kutusunu kaydırsın */
+.prose table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+/* 3) Sabit genişlikli gömülü içerik (harita, video) ekrana sığsın */
+iframe, video, embed, object {
+  max-width: 100%;
+  box-sizing: border-box;   /* kenarlık genişliğe eklenmesin */
+}
+img {
+  max-width: 100%;
+  height: auto;
+}

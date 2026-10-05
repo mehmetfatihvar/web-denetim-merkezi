@@ -24,6 +24,7 @@ GRUPLAR = [
     ("denetim", "Denetimler"),
     ("dogrulama", "Doğrulama"),
     ("ai", "Yapay zekâ denetimi"),
+    ("duzeltme", "Doğrula ve düzelt"),
     ("bologna", "Bologna"),
     ("teslim", "Teslim"),
 ]
@@ -218,6 +219,65 @@ def _saglayici(ayar):
     return [Komut(fonksiyon=lambda yaz: test_et(ayar, yaz), aciklama="Sağlayıcı bağlantı testi")]
 
 
+def _tester_gorsel(ayar, kaynak, cikti, *ek):
+    """Görsel doğrulama çekimi: DOM denetimi + kaydırma, her seferinde sıfırdan."""
+    return _tester(ayar, cikti, "--check-visual", "--kaydir", "--fresh", *ek, source=str(kaynak))
+
+
+def css_dosyasi(ayar) -> Path:
+    """Denenecek CSS: ayarda verilen; yoksa otomatik düzeltmenin önerisi; o da yoksa
+    gorsel-denetim'in ÖİDB için hazırladığı oneri.css."""
+    if ayar["css_oneri"].strip():
+        return yol(ayar["css_oneri"].strip())
+    oto = Klasorler(ayar).oto / "oneri.css"
+    return oto if oto.exists() else yollar.GORSEL_DENETIM / "oneri.css"
+
+
+def etiket_csv(ayar) -> Path:
+    return yol(ayar["etiket_csv"]) if ayar["etiket_csv"].strip() else \
+        Path.home() / "Downloads" / "etiketler.csv"
+
+
+def _dogrulama(ayar):
+    k = Klasorler(ayar)
+    gd = yollar.GORSEL_DENETIM
+    urls = k.dogrulama_cikti / "dogrulama_urls.json"
+    return [
+        _py(ayar, "dogrulama.py", "hazirla", "--harita", yol(ayar["harita"]),
+            "--tarama", k.denetim_cikti / "tarama.csv", "--ai", k.ai_sonuc, "--metin", k.metin_csv,
+            "--http", k.yeniden / "http_hatali.csv", "--cikti", k.dogrulama_cikti, cwd=gd,
+            aciklama="Hata bulunan sayfaları topla"),
+        _tester_gorsel(ayar, urls, k.dogrulama),
+        _py(ayar, "metin_kontrol.py", "--source", urls, "--cikti",
+            k.dogrulama_cikti / "metin_yeniden.csv", cwd=gd, aciklama="Metin hatalarını yeniden ölç"),
+        _py(ayar, "dogrulama.py", "karsilastir", "--dogrulama", k.dogrulama, "--metin-yeni",
+            k.dogrulama_cikti / "metin_yeniden.csv", "--cikti", k.dogrulama_cikti, cwd=gd,
+            aciklama="Eski bulguları yeni ölçümle karşılaştır"),
+    ]
+
+
+def _css_deneme(ayar):
+    k = Klasorler(ayar)
+    gd = yollar.GORSEL_DENETIM
+    css = css_dosyasi(ayar)
+    return [
+        _py(ayar, "css_deneme.py", "hazirla", "--once", k.dogrulama, "--cikti", k.css_cikti, cwd=gd,
+            aciklama="Yana kayan sayfaları seç"),
+        _tester_gorsel(ayar, k.css_cikti / "css_urls.json", k.dogrulama_css, "--css", css),
+        _py(ayar, "css_deneme.py", "karsilastir", "--once", k.dogrulama, "--sonra", k.dogrulama_css,
+            "--cikti", k.css_cikti, cwd=gd, aciklama=f"CSS'siz / CSS'li karşılaştır ({css.name})"),
+    ]
+
+
+def _oto_duzelt(ayar):
+    k = Klasorler(ayar)
+    harita = yol(ayar["harita"])
+    kaynak = ["--urls", harita] if harita_url_sayisi(harita) else ["--site", ayar["site_url"]]
+    return [_py(ayar, "oto_duzelt.py", *kaynak, "--limit", ayar["oto_limit"], "--cihaz", ayar["oto_cihaz"],
+                "--tur", ayar["oto_tur"], "--eszamanli", ayar["esz"], "--zaman-asimi", ayar["zaman_asimi"],
+                "--goruntu", ayar["oto_goruntu"], "--cikti", k.oto, cwd=yollar.GORSEL_DENETIM)]
+
+
 def _teslim(ayar):
     from .teslim import paketle
     return [Komut(fonksiyon=lambda yaz: paketle(Klasorler(ayar), yaz),
@@ -373,6 +433,45 @@ def _adimlar() -> List[Adim]:
                             "--site-adi", a["site_adi"], cwd=yollar.GORSEL_DENETIM)],
              lambda a: [K(a).ai_rapor / "rapor.html"]),
 
+        # ---- Görsel doğrulama ve düzeltme
+        Adim("gd_dogrulama", "duzeltme", "7. Bulguları canlı sitede doğrula",
+             "Kod, metin ve yapay zekâ bulgusu olan sayfaları yeniden açıp DOM üzerinde ölçer: "
+             "hata hâlâ var mı, çekimden mi kaynaklanmış? Taşmalarda hatayı üreten öğeyi ve kaç "
+             "sayfayı etkilediğini çıkarır (kok_neden.csv). Önce yapay zekâ hattı çalışmış olmalı.",
+             _dogrulama,
+             lambda a: [K(a).dogrulama_cikti / "ozet.txt", K(a).dogrulama_cikti / "sonuc.csv",
+                        K(a).dogrulama_cikti / "kok_neden.csv"]),
+        Adim("gd_etiket", "duzeltme", "8a. Etiketleme sayfasını oluştur",
+             "Kodla ölçülemeyen ve yanlış alarm sayılan bulgularla doğrulananlardan bir örneklemi "
+             "tarayıcıda açılan bir sayfada toplar (1 Gerçek, 2 Yanlış, 3 Emin değilim). Bitince "
+             "sayfadaki 'CSV indir' ile etiketler.csv kaydedilir.",
+             lambda a: [_py(a, "etiketle.py", "olustur", "--dogrulama", K(a).dogrulama, "--klasor",
+                            K(a).yeniden / "screenshots", K(a).test / "screenshots", "--ornek",
+                            a["etiket_ornek"], "--sonuc", K(a).dogrulama_cikti / "sonuc.csv",
+                            "--cikti", K(a).etiket, cwd=yollar.GORSEL_DENETIM)],
+             lambda a: [K(a).etiket / "etiketle.html"]),
+        Adim("gd_etiket_ozet", "duzeltme", "8b. Etiketleri işle",
+             "İndirilen etiketler.csv'den tür başına elle ölçülmüş isabeti ve otomatik doğrulamanın "
+             "isabetini hesaplar. Dosya yolu Ayarlar'dan değiştirilebilir (varsayılan: İndirilenler).",
+             lambda a: [_py(a, "etiketle.py", "ozet", "--etiketler", etiket_csv(a), "--sonuc",
+                            K(a).dogrulama_cikti / "sonuc.csv", "--cikti", K(a).etiket,
+                            cwd=yollar.GORSEL_DENETIM)],
+             lambda a: [K(a).etiket / "etiket_ozet.txt", K(a).etiket / "sonuc_etiketli.csv"],
+             sure="saniyeler"),
+        Adim("gd_css", "duzeltme", "9. CSS düzeltme önerisini dene",
+             "Önerilen CSS'i canlı sayfalara (yalnız tarayıcı sekmesine) ekleyip yeniden ölçer: kaç "
+             "sayfa düzeldi, hangileri kaldı, yeni bozulan var mı. CSS: Ayarlar'da verilen ya da "
+             "otomatik düzeltmenin önerisi. Önce 7. adım çalışmış olmalı.",
+             _css_deneme, lambda a: [K(a).css_cikti / "css_ozet.txt", K(a).css_cikti / "css_sonuc.csv"]),
+        Adim("gd_oto", "duzeltme", "10. Otomatik taşma düzeltme (her site)",
+             "Sayfaları ölçer, sayfayı yana kaydıran öğeyi türüne göre sınıflandırır (uzun metin, tablo, "
+             "gömülü içerik, sabit genişlik), sitenin kendi sınıflarıyla CSS kuralı üretir, ekleyip "
+             "yeniden ölçer ve etkisiz kuralı güçlendirir. Site değişmez. Çıktı: oneri.css ve önce/sonra "
+             "görüntüleri.",
+             _oto_duzelt,
+             lambda a: [K(a).oto / "goruntu" / "karsilastir.html", K(a).oto / "oneri.css",
+                        K(a).oto / "ozet.txt"], sure="dakikalar"),
+
         # ---- Bologna
         Adim("bologna_db", "bologna", "PostgreSQL'i başlat (Docker)",
              "Bologna veritabanını Docker ile arka planda başlatır. Kendi PostgreSQL'iniz "
@@ -424,7 +523,7 @@ def tam_hat(ayar: dict) -> List[str]:
     """Harita henüz yoksa (yeni site) hat keşifle başlar."""
     return (["kesif"] if not harita_url_sayisi(yol(ayar["harita"])) else []) + TAM_HAT
 AI_HATTI = ["ai_tarama", "ai_temsilci", "ai_yeniden", "ai_analiz", "ai_hakem", "ai_isabet",
-            "ai_metin", "ai_rapor"]
+            "ai_metin", "ai_rapor", "gd_dogrulama"]
 
 
 def grup_adimlari(grup: str) -> List[Adim]:

@@ -38,6 +38,15 @@ def _dosyalar(k: Klasorler):
         (k.ai_sonuc / "ozet.txt", "veri/ai_ozeti.txt", "Yapay zekâ özeti (token, maliyet)"),
         (k.ai_sonuc / "isabet.txt", "veri/ai_isabet.txt", "Yapay zekâ isabet ölçümü"),
         (k.metin_csv, "veri/metin_kontrol.csv", "Metin kodlama denetimi"),
+        (k.dogrulama_cikti / "ozet.txt", "veri/dogrulama_ozeti.txt", "Bulguların canlı doğrulaması"),
+        (k.dogrulama_cikti / "sonuc.csv", "veri/dogrulama_sonuc.csv", "Doğrulama: bulgu başına karar"),
+        (k.dogrulama_cikti / "kok_neden.csv", "veri/kok_neden.csv",
+         "Kök neden: aynı öğeden kaynaklanan hatalar"),
+        (k.etiket / "etiket_ozet.txt", "veri/etiket_ozeti.txt", "Elle etiketleme isabeti"),
+        (k.etiket / "sonuc_etiketli.csv", "veri/sonuc_etiketli.csv", "Bulgular + insan etiketi"),
+        (k.css_cikti / "css_ozet.txt", "veri/css_deneme_ozeti.txt", "CSS düzeltme denemesi"),
+        (k.oto / "oneri.css", "raporlar/oneri.css", "Taşma düzeltme önerisi (CSS)"),
+        (k.oto / "ozet.txt", "veri/oto_duzeltme_ozeti.txt", "Otomatik düzeltme özeti"),
     ]
 
 
@@ -52,6 +61,10 @@ def paketle(k: Klasorler, yaz) -> int:
             alinan.append((alt, aciklama))
             yaz(f"  + {alt}\n")
     # Son görsel denetim raporu kesit görselleriyle birlikte bir klasördür
+    if (k.oto / "goruntu" / "karsilastir.html").exists():
+        shutil.copytree(k.oto / "goruntu", hedef / "raporlar" / "tasma_duzeltme", dirs_exist_ok=True)
+        alinan.append(("raporlar/tasma_duzeltme/karsilastir.html", "Taşma düzeltme: önce/sonra"))
+        yaz("  + raporlar/tasma_duzeltme/ (önce/sonra görüntüler)\n")
     if (k.ai_rapor / "rapor.html").exists():
         shutil.copytree(k.ai_rapor, hedef / "raporlar" / "gorsel_denetim", dirs_exist_ok=True)
         alinan.append(("raporlar/gorsel_denetim/rapor.html", "Yapay zekâ görsel denetim son raporu"))

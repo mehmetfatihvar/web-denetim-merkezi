@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 ================================================================================
- MEÜ ÖİDB — KANITLI KAPSAMLI TEST ARACI  (tester_v3_evidence)
+ KANITLI EKRAN GÖRÜNTÜSÜ / TEST ARACI  (cekim/tester.py)
 ================================================================================
  Amaç: Phase 5'te keşfedilen TÜM tıklanabilir linkleri gerçek bir tarayıcıda
        (Chromium/Playwright) tek tek test eder ve her test için KANIT üretir:
@@ -20,23 +20,23 @@
 
  ÇALIŞTIRMA ÖRNEKLERİ:
      # 1) Hızlı deneme — ilk 50 sayfa, masaüstü+mobil ekran görüntüsü:
-     python tester_v3_evidence.py --limit 50
+     python tester.py --limit 50
 
      # 2) Belirli aralık (parça parça; 17k sayfayı bölerek test için):
-     python tester_v3_evidence.py --offset 0 --limit 2000
-     python tester_v3_evidence.py --offset 2000 --limit 2000   # sonraki parça
+     python tester.py --offset 0 --limit 2000
+     python tester.py --offset 2000 --limit 2000   # sonraki parça
 
      # 3) Video kanıtı da al (yavaş + çok yer kaplar, kritik sayfalar için):
-     python tester_v3_evidence.py --limit 30 --video
+     python tester.py --limit 30 --video
 
      # 4) Sayfadaki linkleri de kontrol et (kırık link kanıtı):
-     python tester_v3_evidence.py --limit 100 --check-links
+     python tester.py --limit 100 --check-links
 
      # 4b) Görsel/UI kusur denetimi (HTTP'den bağımsız; işaretli kanıt görüntülü):
-     python tester_v3_evidence.py --out-dir gorsel --check-visual --no-screenshots
+     python tester.py --out-dir gorsel --check-visual --no-screenshots
 
      # 5) Kaldığın yerden devam et (aynı klasöre tekrar çalıştır):
-     python tester_v3_evidence.py --limit 2000 --resume
+     python tester.py --limit 2000 --resume
 
  ÇIKTILAR (test_output/ klasörü altında):
      screenshots/<sayfa>__desktop.png
@@ -81,11 +81,14 @@ except ImportError:
     sys.exit(1)
 
 # ------------------------------------------------------------------ sabitler ---
-BASE_URL = "https://193.255.182.40"   # çalışırken link kaynağının ilk adresinden belirlenir
-# Başka bir site test edilirken --site-adi / --locale / --user-agent ile değiştirilir
-SITE_NAME = "MEÜ ÖİDB"
+# Rapor başlığında gösterilen site adresi. Koda yazılmaz: DENETIM_SITE ortam
+# değişkeninden okunur, yoksa link kaynağındaki ilk URL'den çıkarılır.
+BASE_URL = os.environ.get("DENETIM_SITE", "")
+# Siteye özgü ayarlar --site-adi / --locale / --user-agent ile verilir (Web Denetim Merkezi
+# profilden geçirir). Site adı verilmezse site adresinin alan adı kullanılır.
+SITE_NAME = ""
 LOCALE = "tr-TR"
-USER_AGENT = "MEU-OIDB-Tester/3.0 (staj kanitli test)"
+USER_AGENT = "Web-Denetim-Tester/3.0 (kanitli test)"
 TURKISH_CHARS = "çÇğĞıİöÖşŞüÜ"
 NON_HTTP_SCHEMES = ("mailto:", "tel:", "javascript:", "file:", "#", "data:", "sms:")
 # Belge/dosya uzantıları (belge denetimi için)
@@ -325,6 +328,70 @@ VISUAL_AUDIT_JS = r"""(opts) => {
   return defects;
 }"""
 
+# Sayfanın kendisi yatay kayıyor mu: belge genişliği görünür alandan büyükse ve
+# html/body yatay kaydırmayı kapatmamışsa kullanıcı sayfayı yana kaydırabilir.
+SAYFA_GENISLIK_JS = r"""() => {
+  const h = document.documentElement, b = document.body;
+  const ox = (el) => el ? getComputedStyle(el).overflowX : '';
+  const kapali = (v) => v === 'hidden' || v === 'clip';
+  const scroll = Math.max(h.scrollWidth, b ? b.scrollWidth : 0);
+  const kayiyor = scroll > h.clientWidth + 1 && !kapali(ox(h)) && !kapali(ox(b));
+  // Sayfa kayıyorsa onu genişleten öğeyi deneyerek bul: her düzeyde çocukları
+  // tek tek gizleyip sayfa genişliğini en çok düşüreni seç ve onun içine in.
+  // Konuma bakmak yetmiyor: kendi kutusunda kaydırılan öğeler (breadcrumb),
+  // ::before/::after, sıfır genişlikli kutudan taşan metin ve atasının
+  // kırpmasından kaçan mutlak konumlu öğeler yanlış ya da hiç sonuç vermiyor.
+  let tasiran = null;
+  if (kayiyor && b) {
+    const genislik = () => Math.max(h.scrollWidth, b.scrollWidth);
+    const sx = window.scrollX, sy = window.scrollY;
+    const dene = (el) => {
+      const eski = el.style.getPropertyValue('display');
+      const oncelik = el.style.getPropertyPriority('display');
+      el.style.setProperty('display', 'none', 'important');
+      const w = genislik();
+      if (eski) el.style.setProperty('display', eski, oncelik);
+      else el.style.removeProperty('display');
+      return w;
+    };
+    let kutu = b;
+    for (let derinlik = 0; derinlik < 60; derinlik++) {
+      const once = genislik();
+      let enIyi = null, enIyiW = once;
+      for (const c of kutu.children) {
+        if (getComputedStyle(c).display === 'none') continue;
+        const w = dene(c);
+        if (w < enIyiW) { enIyi = c; enIyiW = w; }
+      }
+      if (!enIyi) break;
+      kutu = enIyi;
+    }
+    window.scrollTo(sx, sy);
+    for (const e of document.querySelectorAll('[data-genisleten]')) e.removeAttribute('data-genisleten');
+    if (kutu !== b) {
+      kutu.setAttribute('data-genisleten', '');   // oto_duzelt.py öğeyi bu işaretle bulur
+      const el = kutu, st = getComputedStyle(el), r = el.getBoundingClientRect();
+      let sel = el.tagName.toLowerCase();
+      if (el.id) sel += '#' + el.id;
+      else if (typeof el.className === 'string' && el.className.trim())
+        sel += '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.');
+      tasiran = {selector: sel.slice(0, 90), tasma_px: Math.round(scroll - h.clientWidth),
+                 y: Math.round(r.top + sy),
+                 gorunur: st.visibility !== 'hidden' && parseFloat(st.opacity || '1') > 0,
+                 metin: (el.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 60),
+                 // düzeltme önerisi için ipuçları: satır kırılmasını engelleyen stil var mı,
+                 // öğe içerik alanında (.prose) mı
+                 ws: st.whiteSpace, display: st.display, owrap: st.overflowWrap,
+                 prose: !!el.closest('.prose'),
+                 ata: (el.parentElement && typeof el.parentElement.className === 'string')
+                      ? el.parentElement.tagName.toLowerCase() + '.' +
+                        el.parentElement.className.trim().split(/\s+/).slice(0, 3).join('.') : ''};
+    }
+  }
+  return {scroll, client: h.clientWidth, vw: window.innerWidth,
+          html_ox: ox(h), body_ox: ox(b), kayiyor, tasiran};
+}"""
+
 # --- Kusurlu bolgeleri kirmizi kutuyla isaretleyip kanit goruntusu almak icin ---
 VISUAL_MARK_JS = r"""(defects) => {
   const box = document.createElement('div');
@@ -485,6 +552,12 @@ async def test_page(browser, url, opts, idx, total):
         resp = await page.goto(url, wait_until="load", timeout=opts.timeout * 1000)
         rec["load_time"] = round(time.time() - start, 3)
         rec["http_status"] = resp.status if resp else None
+        if getattr(opts, "css_icerik", None):   # --css: önerilen düzeltmeyi canlı sayfaya uygula
+            try:
+                await page.add_style_tag(content=opts.css_icerik)
+                rec["eklenen_css"] = opts.css
+            except Exception as e:
+                rec["eklenen_css_hata"] = str(e)[:200]
 
         # --- Güvenlik başlıkları (gerçek yanıttan) ---
         headers = {k.lower(): v for k, v in (resp.headers if resp else {}).items()}
@@ -594,6 +667,7 @@ async def test_page(browser, url, opts, idx, total):
         if opts.check_visual:
             shot_dir = os.path.join(OUT_DIR, "screenshots")
             vis_res = {"desktop": [], "mobile": []}
+            genislik = {}
             for vp_name, vp in (("desktop", DESKTOP_VIEWPORT), ("mobile", MOBILE_VIEWPORT)):
                 try:
                     await page.set_viewport_size(vp)
@@ -601,6 +675,10 @@ async def test_page(browser, url, opts, idx, total):
                     defects = await page.evaluate(VISUAL_AUDIT_JS, {"mobile": vp_name == "mobile"})
                 except Exception:
                     defects = []
+                try:   # sayfa bütünüyle yana kayıyor mu? (taşmanın kullanıcı açısından tanımı)
+                    genislik[vp_name] = await page.evaluate(SAYFA_GENISLIK_JS)
+                except Exception:
+                    pass
                 defects = (defects or [])[:40]
                 vis_res[vp_name] = defects
                 if defects:  # kusur varsa işaretli kanıt görüntüsü üret
@@ -615,6 +693,7 @@ async def test_page(browser, url, opts, idx, total):
                         pass
             alld = vis_res["desktop"] + vis_res["mobile"]
             rec["visual"] = {
+                "sayfa_genislik": genislik,
                 "desktop": vis_res["desktop"],
                 "mobile": vis_res["mobile"],
                 "defect_count": len(alld),
@@ -1211,6 +1290,13 @@ def site_base(url):
     return f"{p.scheme}://{p.netloc}" if p.scheme and p.netloc else BASE_URL
 
 
+def site_adini_tamamla():
+    """Site adı verilmediyse alan adını kullan (ör. www.ornek.edu.tr)."""
+    global SITE_NAME
+    if not SITE_NAME:
+        SITE_NAME = urlparse(BASE_URL).netloc or "Web sitesi"
+
+
 def apply_site_options(opts):
     """Siteye özgü ayarları (ad, yerel ayar, User-Agent) genel değişkenlere uygula."""
     global SITE_NAME, LOCALE, USER_AGENT
@@ -1223,6 +1309,11 @@ async def run(opts):
     global OUT_DIR, BASE_URL
     OUT_DIR = opts.out_dir
     apply_site_options(opts)
+    opts.css_icerik = None
+    if opts.css:
+        with open(opts.css, encoding="utf-8") as f:
+            opts.css_icerik = f.read()
+        print(f"[*] CSS ekleniyor: {opts.css}")
     for sub in ("screenshots", "videos"):
         os.makedirs(os.path.join(OUT_DIR, sub), exist_ok=True)
 
@@ -1241,8 +1332,9 @@ async def run(opts):
                     pass
         for i, r in enumerate(results, 1):
             r["index"] = i
-        if results:
+        if results and not BASE_URL:
             BASE_URL = site_base(results[0].get("url"))
+        site_adini_tamamla()
         meta = {"base": BASE_URL, "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
                 "browser": "Chromium (yeniden üretim)", "count": len(results)}
         _regenerate_reports(results, meta)
@@ -1267,8 +1359,9 @@ async def run(opts):
         sys.exit(1)
 
     urls = load_urls(source, opts.limit, opts.offset)
-    if urls:
+    if not BASE_URL and urls:
         BASE_URL = site_base(urls[0])
+    site_adini_tamamla()
 
     # --- BİRİKİMLİ SONUÇ DOSYASI (tüm parçalar buraya yazılır) ---
     # Her sayfa tamamlandıkça results.jsonl'e bir satır eklenir. Böylece:
@@ -1312,7 +1405,7 @@ async def run(opts):
         todo = [u for u in urls if u not in done]
     total = len(todo)
     print("=" * 74)
-    print(f"  {SITE_NAME} — KANITLI KAPSAMLI TEST ARACI (tester_v3_evidence)")
+    print(f"  {SITE_NAME} — KANITLI EKRAN GÖRÜNTÜSÜ / TEST ARACI")
     print("=" * 74)
     print(f"[*] Kaynak: {source}")
     print(f"[*] Bu aralıkta {len(urls)} sayfa | zaten yapılmış {len(done & set(urls))} | test edilecek {total}")
@@ -1507,8 +1600,10 @@ def parse_args():
     ap.add_argument("--report-only", action="store_true", help="Test çalıştırma; mevcut results.jsonl'den report.html/xlsx/summary'yi yeniden üret (saniyeler)")
     ap.add_argument("--retry-errors", action="store_true", help="Yalnızca hatalı/timeout olmuş sayfaları yeniden test et (düşük --concurrency ile)")
     ap.add_argument("--out-dir", default="test_output", help="Çıktı klasörü (varsayılan: test_output). Link/belge denetimini ayrı klasörde yapmak için değiştir.")
+    ap.add_argument("--css", default=None,
+                    help="Her sayfaya yüklendikten sonra bu CSS dosyasını ekle (düzeltme önerisini ölçmek için)")
     ap.add_argument("--headed", action="store_true", help="Tarayıcıyı görünür çalıştır (debug)")
-    ap.add_argument("--site-adi", default=None, help=f"Raporlarda görünecek site adı (varsayılan: {SITE_NAME})")
+    ap.add_argument("--site-adi", default=None, help="Raporlarda görünecek site adı (varsayılan: alan adı)")
     ap.add_argument("--locale", default=None, help=f"Tarayıcı dil/yerel ayarı (varsayılan: {LOCALE})")
     ap.add_argument("--user-agent", default=None, help="Tarayıcının User-Agent değeri")
     ap.set_defaults(screenshots=True)

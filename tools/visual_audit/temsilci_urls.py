@@ -3,13 +3,13 @@
 Temsilci sayfaların URL listesini çıkarır (yeniden çekim için).
 
 tarama.py'nin seçtiği temsilci görüntüler (ornekler.csv) dosya adıyla tutulur.
-Dosya adları tester_v3_evidence.py'deki safe_name() ile URL'den üretilir
+Dosya adları cekim/tester.py'deki safe_name() ile URL'den üretilir
 (yol + md5(url)[:8]). Bu script site haritasındaki her URL için aynı adı
 hesaplayıp eşleştirir ve tester'ın --source ile okuyabileceği bir JSON yazar.
 
 Kullanım:
-  python temsilci_urls.py --harita ..\\..\\data\\final_complete_site_map.json
-  python ..\\tester_v3_evidence.py --source temsilci_urls.json --out-dir yeniden_cekim --kaydir
+  python temsilci_urls.py --harita ..\\data\\final_complete_site_map.json
+  python ..\\cekim\\tester.py --source temsilci_urls.json --out-dir ..\\yeniden_cekim --kaydir
 
 Çıktı: temsilci_urls.json  {"url_list": [...]}  + eşleşmeyenlerin listesi
 """
@@ -25,7 +25,7 @@ from urllib.parse import urlparse
 
 
 def safe_name(url, maxlen=110):
-    """tester_v3_evidence.safe_name ile birebir aynı olmalı."""
+    """cekim/tester.py safe_name ile birebir aynı olmalı."""
     p = urlparse(url)
     path = (p.path or "/").strip("/")
     q = ("_" + re.sub(r"[^a-zA-Z0-9]+", "-", p.query)) if p.query else ""

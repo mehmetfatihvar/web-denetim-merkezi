@@ -64,6 +64,17 @@ SITE_ALANLARI = [
         ("rota_limit", "Rota doğrulama sınırı", "sayi", "0 = hepsi", None),
         ("tiklama_limit", "Tıklama doğrulama sınırı", "sayi", "", None),
     ]),
+    ("Görsel doğrulama ve düzeltme", [
+        ("oto_limit", "Otomatik düzeltme: sayfa sayısı", "sayi",
+         "Ölçülecek en fazla sayfa (şablonlara yayılarak seçilir).", None),
+        ("oto_cihaz", "Otomatik düzeltme: cihaz", "secim", "", ["mobile", "desktop", "ikisi"]),
+        ("oto_tur", "Otomatik düzeltme: tur sayısı", "sayi", "En fazla düzeltme turu.", None),
+        ("oto_goruntu", "Önce/sonra görüntüsü", "sayi", "Kaç sayfanın görüntüsü alınsın (0 = alma).", None),
+        ("css_oneri", "Denenecek CSS dosyası", "dosya",
+         "Boş: otomatik düzeltmenin önerisi; o da yoksa hazır oneri.css.", None),
+        ("etiket_ornek", "Etiketleme örneklemi", "sayi", "Doğrulananlardan rastgele kaç bulgu.", None),
+        ("etiket_csv", "İndirilen etiketler.csv", "dosya", "Boş: İndirilenler klasörü.", None),
+    ]),
     ("Yapay zekâ talimatı", [
         ("site_tanimi", "Site tanımı (İngilizce)", "metin",
          "Modele 'You are a UI QA reviewer for ...' diye verilir.", None),
@@ -132,6 +143,8 @@ SAYFA_ACIKLAMA = {
     "ai": "Ekran görüntüleri kodla taranır, yapay zekâ modellerine sorulur ve son rapor üretilir.",
     "bologna": "OİBS Bologna Bilgi Paketi'ni tarayıp PostgreSQL'e yazar.",
     "teslim": "Bütün rapor ve verileri anlaşılır adlarla tek klasörde toplar.",
+    "duzeltme": "Bulgular canlı sitede doğrulanır, yanlış alarmlar elle ayıklanır, taşma için CSS "
+                "düzeltmesi üretilip denenir. Site değişmez; CSS yalnız tarayıcı sekmesine eklenir.",
 }
 DURUM_YAZI = {"baslangic": "● Çalışıyor", "basarili": "✔ Başarılı", "hatali": "✖ Başarısız",
               "durdu": "■ Durduruldu"}
@@ -449,6 +462,8 @@ class Uygulama:
             ("Deneme testi raporu", lambda: k().deneme / "report.html"),
             ("Görsel kusur raporu", lambda: k().gorsel / "gorsel_rapor.html"),
             ("Yapay zekâ son raporu", lambda: k().ai_rapor / "rapor.html"),
+            ("Doğrulama özeti", lambda: k().dogrulama_cikti / "ozet.txt"),
+            ("Taşma düzeltme (önce/sonra)", lambda: k().oto / "goruntu" / "karsilastir.html"),
             ("Teslim paketi", lambda: k().teslim / "index.html"),
             ("Çıktı klasörü", lambda: k().kok),
         ]

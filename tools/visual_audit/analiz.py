@@ -35,7 +35,7 @@ Kullanım:
   python analiz.py --hakem claude --toplu
 
   # Yeniden çekilmiş (--kaydir) görüntülerle çalışmak:
-  python analiz.py --modeller gemini --klasor yeniden_cekim\\screenshots
+  python analiz.py --modeller gemini --klasor ..\\yeniden_cekim\\screenshots
 
   # Model sürümü seçmek: claude:claude-sonnet-5, gemini:<model adı>
 

@@ -4,7 +4,7 @@ Metin kodlama denetimi (kodla, yapay zekasız)
 
 Yapay zeka incelemesi İngilizce sayfalarda Türkçe karakterlerin '?' ile
 değiştirildiğini (Atat?rk, ?ZT?RK) ve HTML kodlarının ekrana basıldığını
-(Master&#39;s) buldu. tester_v3_evidence.py yalnızca 'Ã¼' tipi mojibake
+(Master&#39;s) buldu. cekim/tester.py yalnızca 'Ã¼' tipi mojibake
 aradığı için bunları kaçırmıştı. Bu script her sayfanın görünen metninde
 (innerText) şu kalıpları arar:
 
@@ -19,7 +19,7 @@ Adres gibi görünen kelimelerdeki eşleşmeler (index.aspx?lang=tr gibi) sayıl
 
 Kullanım:
   python metin_kontrol.py --source temsilci_urls.json
-  python metin_kontrol.py --source ..\\..\\data\\final_complete_site_map.json --limit 2000
+  python metin_kontrol.py --source ..\\data\\final_complete_site_map.json --limit 2000
 
 Çıktı: metin_kontrol.csv (sayfa başına bulgu) + ekranda özet
 """
