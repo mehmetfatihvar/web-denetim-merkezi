@@ -417,3 +417,33 @@ class SozlesmeTestleri(unittest.TestCase):
                                 and m.group(1) != "profile" and m.group(1) != "rm":
                             eksikler.append(f"{adim.id}: --{m.group(1)}")
         self.assertEqual(sorted(set(eksikler)), [])
+
+
+class SatirSonuTestleri(unittest.TestCase):
+    def test_windows_satir_sonu_ve_bolunmus_crlf(self):
+        cikti = []
+        c = Calistirici(cikti.append)
+        c._izleme_sifirla()
+        for parca in ("bir\r\niki\r", "\nilerleme 1\rilerleme 2\r\n", "son\r"):
+            c._cikti(parca)
+        c._cikti("", son=True)
+        self.assertEqual("".join(cikti), "bir\niki\nilerleme 1\rilerleme 2\nson\r")
+
+
+class DurdurmaTestleri(GeciciKlasor):
+    def test_durdurma_her_sistemde(self):
+        """Windows'ta Ctrl+Break/taskkill, diğerlerinde SIGINT/SIGKILL yolu."""
+        adim = Adim("u", "web", "U", "", lambda a: [
+            Komut([sys.executable, "-c", "import time\nprint('basladi', flush=True)\ntime.sleep(120)"])])
+        c = Calistirici(lambda m: None)
+        sonuc = []
+        t = threading.Thread(target=lambda: sonuc.append(
+            c.calistir([adim], dict(A.VARSAYILAN, cikti_koku=str(self.t)))))
+        t.start()
+        time.sleep(2)
+        bas = time.time()
+        c.durdur()
+        t.join(30)
+        self.assertFalse(t.is_alive(), "durdurulan süreç kapanmadı")
+        self.assertLess(time.time() - bas, 20)
+        self.assertEqual(sonuc, [False])

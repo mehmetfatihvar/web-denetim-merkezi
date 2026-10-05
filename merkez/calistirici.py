@@ -91,6 +91,7 @@ class Calistirici:
         self.adim, self.sira, self.toplam = adim, sira, toplam
         self.komut_sayisi, self.komut_no = max(komut_sayisi, 1), 0
         self.bolucu = SatirBolucu()
+        self._bekleyen_cr = ""
         self.tahmin = SureTahmini()
         self.adim_bas = time.monotonic()
         self.hata_sayisi = self.uyari_sayisi = 0
@@ -177,8 +178,15 @@ class Calistirici:
                      f"hata {r['hata']}, uyarı {r['uyari']}\n")
 
     # ------------------------------------------------------------ izleme
-    def _cikti(self, metin: str):
-        """Aracın çıktısı: kayda yaz, satırlardan ilerleme ve sorun çıkar."""
+    def _cikti(self, metin: str, son: bool = False):
+        """Aracın çıktısı: kayda yaz, satırlardan ilerleme ve sorun çıkar.
+        Windows satır sonları (\r\n) \n'ye çevrilir; tek başına \r (aynı satırı güncelleyen
+        ilerleme çubukları) korunur. Parça sonundaki \r, ardından \n gelebileceği için bekletilir."""
+        metin = self._bekleyen_cr + metin
+        self._bekleyen_cr = ""
+        if metin.endswith("\r") and not son:
+            metin, self._bekleyen_cr = metin[:-1], "\r"
+        metin = metin.replace("\r\n", "\n")
         self._yaz_ve_kaydet(metin)
         for satir in self.bolucu.ekle(metin):
             self._satir_isle(satir)
@@ -259,7 +267,7 @@ class Calistirici:
                 if not parca:
                     break
                 self._cikti(cozucu.decode(parca))
-            self._cikti(cozucu.decode(b"", final=True))
+            self._cikti(cozucu.decode(b"", final=True), son=True)
             for satir in self.bolucu.bitir():
                 self._satir_isle(satir)
 
