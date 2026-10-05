@@ -1,0 +1,12 @@
+# Sanal ortam ve Python önbellekleri
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Kişisel ayarlar (API anahtarları burada olabilir) ve tüm çıktılar
+ayarlar.json
+ciktilar/
+
+# Bologna derleme çıktısı
+bologna-scraper/bin/

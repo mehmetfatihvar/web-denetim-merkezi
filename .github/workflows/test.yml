@@ -1,0 +1,49 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  program:
+    name: Program (${{ matrix.os }}, Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      # Birim testleri yalnız standart kütüphaneyle çalışır; araçlar sözleşme testinde
+      # kaynak kodundan denetlenir, kurulum gerekmez.
+      - run: python -m unittest discover -s tests -v
+
+  bologna:
+    name: Bologna scraper (Go)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: bologna-scraper
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: bologna
+          POSTGRES_PASSWORD: bologna
+          POSTGRES_DB: bologna
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U bologna" --health-interval 2s --health-retries 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: bologna-scraper/go.mod
+          cache-dependency-path: bologna-scraper/go.sum
+      - run: make lint
+      - run: make test-integration
+      - run: make build

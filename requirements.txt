@@ -1,0 +1,12 @@
+playwright>=1.40.0
+pandas>=2.0.0
+openpyxl>=3.1.0
+requests>=2.31
+beautifulsoup4>=4.12
+pillow>=10.0
+# Yapay zekâ görsel denetimi (visual_audit/analiz.py) - kullanılan sağlayıcıya göre:
+anthropic>=0.70
+google-genai>=1.0
+ollama>=0.4
+# Staj Merkezi arayüz teması (isteğe bağlı; yoksa temel tema kullanılır)
+sv-ttk>=2.6
