@@ -4,7 +4,8 @@ Bir web sitesini baştan sona test eden ve denetleyen masaüstü programı. Büt
 pencereden yapılır:
 - site keşfi, kanıtlı tarayıcı testi
 - belge, kırık link ve görsel/UI kusur denetimi, kırık sayfa doğrulaması
-- yapay zekâ destekli görsel denetim
+- yapay zekâ destekli görsel denetim, bulguların canlı sitede doğrulanması ve taşma için
+  otomatik CSS düzeltme önerisi
 - OİBS Bologna Bilgi Paketi taraması
 - teslim paketi
 
@@ -59,7 +60,7 @@ Pencerenin solunda menü, sağında seçilen sayfa, altında ilerleme paneli ve 
 - **Sol menü:**
   - Site profili seçimi ve **Yeni site ekle**.
   - Sayfalar: Ana sayfa, Hazırlık, Web testi, Denetimler, Doğrulama, Yapay zekâ denetimi,
-    Bologna, Teslim, Raporlar ve özet, Ayarlar.
+    Doğrula ve düzelt, Bologna, Teslim, Raporlar ve özet, Ayarlar.
   - En altta açık/karanlık tema düğmesi.
 - **Ana sayfa:**
   - Özet kutucukları: site haritası, test edilen sayfa ve kapsam, kırık sayfa, kırık bağlantı,
@@ -119,7 +120,40 @@ kısmi sonucu kaydetmesine izin verir, sonra tarayıcılar dahil tüm alt süre�
 
 ---
 
-## 4. Yapay zekâ sağlayıcıları ve modeller
+## 4. Görsel denetim: yapay zekâ, doğrulama ve düzeltme
+
+Görsel denetim, [gorsel-denetim](https://github.com/mehmetfatihvar/gorsel-denetim) reposunda
+geliştirilen araç zinciridir; programda iki sayfaya ayrılır.
+
+**Yapay zekâ denetimi (1-6):**
+1. Ekran görüntüleri kodla taranır.
+2. Temsilciler seçilir ve sona kadar kaydırılarak yeniden çekilir.
+3. Modeller dilimlere bakar, hakem model anlaşmazlıkları çözer.
+4. Modellerin isabeti ölçülür.
+5. Görünen metinde kodlama hataları aranır.
+6. Ekran görüntüsü kesitli son rapor üretilir.
+
+**Doğrula ve düzelt (7-10):**
+
+| Aşama | Ne yapar |
+|---|---|
+| 7. Canlı doğrulama | Bulgu olan sayfaları yeniden açıp DOM'da ölçer: DOGRULANDI / GORULMEDI / ELLE. Taşmada sayfa gerçekten yana kaymıyorsa yanlış alarm sayar; hatayı üreten öğeyi ve kaç sayfayı etkilediğini çıkarır (`kok_neden.csv`). Yapay zekâ hattının son adımıdır. |
+| 8. Etiketleme | Ölçülemeyen ve yanlış alarm sayılan bulgularla bir örneklemi tarayıcıda açılan sayfada toplar (`1` Gerçek, `2` Yanlış, `3` Emin değilim). "CSV indir" ile kaydedilen `etiketler.csv` 8b adımıyla işlenir; tür başına elle ölçülmüş isabet çıkar. |
+| 9. CSS denemesi | Önerilen CSS'i canlı sayfalara (yalnız tarayıcı sekmesine) ekleyip yeniden ölçer: düzelen, kalan, yeni bozulan. |
+| 10. Otomatik taşma düzeltme | **Her sitede**: yana kaydıran öğeyi türüne göre sınıflandırıp sitenin kendi sınıflarıyla CSS kuralı üretir, ekleyip ölçer, etkisizse güçlendirir. Çıktı: `oneri.css` ve önce/sonra görüntüleri. |
+
+Site hiçbir aşamada değişmez. 9. aşamada denenen CSS, Ayarlar'da verilen dosyadır. Ayar boşsa
+10. aşamanın önerisi kullanılır, o da yoksa ÖİDB için hazırlanmış `tools/visual_audit/oneri.css`.
+
+**gorsel-denetim'den güncelleme:** `tools/visual_audit/` ile `gorsel-denetim/denetim/`, ve
+`tools/tester_v3_evidence.py` ile `gorsel-denetim/cekim/tester.py` aynı araçlardır. Güncellerken
+iki tarafın değişiklikleri üç yönlü birleştirilir (`git merge-file`). Program için eklenen
+seçenekler (site adı ve tanımı, OpenAI uyumlu sağlayıcı ...) korunur; sözleşme testleri
+eksikleri yakalar.
+
+---
+
+## 5. Yapay zekâ sağlayıcıları ve modeller
 
 Ayarlar > **Yapay zekâ, Bologna, genel** sekmesinde anahtarlar, adresler ve modeller girilir.
 **Tarayan modeller** ve **hakem modeli** alanları şu adları alır:
@@ -147,7 +181,7 @@ API anahtarları varsayılan olarak **diske yazılmaz**. "Anahtarları diske kay
 
 ---
 
-## 5. Komut satırı
+## 6. Komut satırı
 
 Arayüz açmadan (sunucuda, zamanlanmış görevde):
 
@@ -168,7 +202,7 @@ Kurulumdan sonra `python` yerine `.venv\Scripts\python` (Linux/macOS: `.venv/bin
 
 ---
 
-## 6. Klasörler ve çıktılar
+## 7. Klasörler ve çıktılar
 
 ```
 web-denetim-merkezi/
@@ -193,7 +227,8 @@ web-denetim-merkezi/
 │   ├── cluster_templates.py       Şablon kümeleme
 │   ├── verify_routes.py, verify_clicks.py   Kırık sayfa doğrulama
 │   ├── visual_ai_review.py        Yerel model (Ollama) incelemesi
-│   └── visual_audit/              Yapay zekâ görsel denetimi (tarama, analiz, isabet, metin, rapor)
+│   └── visual_audit/              Görsel denetim (gorsel-denetim/denetim): tarama, analiz, isabet,
+│                                  metin, rapor, dogrulama, etiketle, css_deneme, oto_duzelt
 ├── bologna-scraper/               OİBS Bologna → PostgreSQL (Go)
 ├── profiller/                     Site profilleri (meu-oidb.json hazır)
 ├── data/meu-oidb/                 ÖİDB site haritası (17.394 sayfa) ve şablon kümeleri
@@ -204,6 +239,8 @@ web-denetim-merkezi/
     ├── denetim/, linkdenetim/, gorsel/       Belge, link, görsel denetim
     ├── gorsel_ai/, yeniden_cekim/
     ├── visual_audit/denetim_cikti/           Piksel tarama, ai_v2/, rapor/
+    ├── visual_audit/dogrulama_cikti/, etiket/, css_cikti/, oto_cikti/   Doğrula ve düzelt
+    ├── dogrulama/, dogrulama_css/            Doğrulama çekimleri
     ├── routes_verification.csv, clicks_verification.csv
     ├── merkez_kayitlari/                     Her çalışmanın kaydı
     └── TESLIM/index.html                     Teslim paketi
@@ -211,7 +248,7 @@ web-denetim-merkezi/
 
 ---
 
-## 7. Geliştirme
+## 8. Geliştirme
 
 - **Yeni araç:** `merkez/adimlar.py`'deki listeye bir `Adim` eklemek yeterlidir. Arayüz, komut
   satırı, durum ekranı ve kayıtlar yeni adımı kendiliğinden kullanır.
