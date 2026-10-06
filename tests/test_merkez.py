@@ -72,6 +72,14 @@ class AyarTestleri(GeciciKlasor):
         self.assertEqual(genel["claude_model"], "claude-test")
         self.assertNotIn("esz", genel)
 
+    def test_varsayilan_gorunum_sade(self):
+        """Windows'ta hızlı olan sade görünüm varsayılandır; eski 'gorunum' anahtarı okunmaz
+        (eskiden 'modern' kendiliğinden kaydediliyordu, kullanıcıyı yavaş temada tutmasın)."""
+        self.ayar_dosyasi.write_text(json.dumps({"gorunum": "modern"}), encoding="utf-8")
+        ayar = A.yukle(self.ayar_dosyasi, self.profiller)
+        self.assertEqual(ayar["arayuz_gorunumu"], "sade")
+        self.assertNotIn("gorunum", ayar)
+
     def test_bozuk_tur_yok_sayilir(self):
         self.profiller.mkdir()
         (self.profiller / "b.json").write_text(json.dumps({"esz": "dört", "kesif_rps": 3}), encoding="utf-8")

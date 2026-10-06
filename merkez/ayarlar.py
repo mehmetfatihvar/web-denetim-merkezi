@@ -76,7 +76,10 @@ GENEL_VARSAYILAN = {
     "python": sys.executable,
     "hata_olursa_devam": False,
     "ayrintili": False,
-    "gorunum": "modern",         # modern: sv-ttk (Windows 11 görünümü) | hizli: sade ve hızlı çizim
+    # sade: yerleşik tema, hızlı çizim (varsayılan) | modern: sv-ttk (Windows 11 görünümü).
+    # sv-ttk her öğeyi saydam resimlerle çizer; Windows'ta ölçümde sayfa geçişi 5-7 kat,
+    # tema değişimi ~5 kat yavaş çıktı. (Eski 'gorunum' anahtarı bilerek okunmaz.)
+    "arayuz_gorunumu": "sade",
     "tema": "light",             # arayüz: light | dark          # hata ayıklama: komut ayrıntıları + Bologna -v
     # Sağlayıcılar
     "anthropic_key": "",
