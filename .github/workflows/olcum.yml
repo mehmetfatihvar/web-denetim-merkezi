@@ -14,7 +14,7 @@ jobs:
           python-version: "3.12"
       - run: pip install sv-ttk
       - run: python olcum/olc.py modern bos
-      - run: python olcum/olc.py hizli bos
+      - run: python olcum/olc.py sade bos
       - run: python olcum/olc.py modern kayit
       - run: python olcum/olc.py modern akis
-      - run: python olcum/olc.py hizli akis
+      - run: python olcum/olc.py sade akis

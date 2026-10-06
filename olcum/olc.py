@@ -12,7 +12,7 @@ def say(w):
 
 
 def olc(gorunum, senaryo):
-    ayar = A.yukle(); ayar["gorunum"] = gorunum; ayar["tema"] = "light"
+    ayar = A.yukle(); ayar["arayuz_gorunumu"] = gorunum; ayar["tema"] = "light"
     kok = tk.Tk()
     t = time.perf_counter(); app = arayuz.Uygulama(kok, ayar); kok.update(); acilis = time.perf_counter() - t
     for _ in range(3):

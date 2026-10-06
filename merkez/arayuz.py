@@ -130,9 +130,10 @@ GENEL_ALANLARI = [
     ]),
     ("Genel", [
         ("python", "Python yorumlayıcısı", "dosya", "Araçları çalıştıracak Python.", None),
-        ("gorunum", "Arayüz görünümü", "secim",
-         "hizli: sade ama hızlı çizim; arayüz yavaşsa seçin. Programı yeniden açınca geçerli olur.",
-         ["modern", "hizli"]),
+        ("arayuz_gorunumu", "Arayüz görünümü", "secim",
+         "sade: hızlı (önerilen). modern: Windows 11 görünümü, ama Windows'ta sayfa geçişleri ve "
+         "tema değişimi belirgin yavaştır. Programı yeniden açınca geçerli olur.",
+         ["sade", "modern"]),
         ("ayrintili", "Ayrıntılı kayıt (hata ayıklama)", "evet",
          "Her komutun klasörü, ortamı ve argümanları kayda yazılır; Bologna -v ile çalışır.", None),
     ]),
@@ -285,7 +286,7 @@ class Uygulama:
         kok.title(f"Web Denetim Merkezi {SURUM}")
         kok.geometry("1320x900")
         kok.minsize(1040, 700)
-        self.hizli = self.ayar.get("gorunum") == "hizli"
+        self.hizli = self.ayar.get("arayuz_gorunumu") != "modern"
         self.p = tema.uygula(kok, self.ayar.get("tema", "light"), self.hizli)
         self.yazi = tema.yazi_ailesi()
         self._iskelet()
@@ -374,7 +375,7 @@ class Uygulama:
         self.tema_dugmesi.bind("<Button-1>", lambda _: (self.tema_var.set(not self.tema_var.get()),
                                                         self._tema_degistir()))
         self.yan_etiketler.append((self.tema_dugmesi, "menu"))
-        surum = tk.Label(y, text=f"Sürüm {SURUM}" + ("" if tema.sv_ttk_var() and not self.hizli else " · sade görünüm"),
+        surum = tk.Label(y, text=f"Sürüm {SURUM}" + (" · modern görünüm" if tema.sv_ttk_var() and not self.hizli else ""),
                          anchor="w")
         surum.pack(side="bottom", fill="x", padx=22)
         self.yan_etiketler.append((surum, "kucuk"))
@@ -1014,7 +1015,7 @@ class Uygulama:
         A.kaydet(self.ayar)
         self._profil_yukle_arayuze(formu_doldur=False)
         self._yaz(f"Ayarlar kaydedildi (profil: {self.ayar['aktif_profil']}).\n")
-        if (self.ayar.get("gorunum") == "hizli") != self.hizli:
+        if (self.ayar.get("arayuz_gorunumu") != "modern") != self.hizli:
             messagebox.showinfo("Görünüm", "Yeni görünüm program yeniden açılınca geçerli olur.")
 
     def _profil_yukle_arayuze(self, formu_doldur=True):

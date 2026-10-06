@@ -93,21 +93,51 @@ def _clam_boya(s: ttk.Style, p: dict):
                 bordercolor=p["kenar"], lightcolor=p["kenar"], darkcolor=p["kenar"],
                 troughcolor=p["kenar"], selectbackground=p["secili"], selectforeground=p["metin"],
                 insertcolor=p["metin"])
-    s.configure("TButton", padding=(12, 5), background=p["kart"])
-    s.map("TButton", background=[("active", p["secili"]), ("disabled", p["bg"])],
+    # Düz (flat) düğmeler: clam'in kabartma gölgeleri zeminle aynı renge çekilir
+    s.configure("TButton", padding=(12, 5), width=0, background=p["kart"], bordercolor=p["kenar"],
+                lightcolor=p["kart"], darkcolor=p["kart"], focuscolor=p["vurgu"])
+    s.map("TButton", background=[("disabled", p["bg"]), ("pressed", p["kenar"]), ("active", p["secili"])],
+          lightcolor=[("disabled", p["bg"]), ("pressed", p["kenar"]), ("active", p["secili"])],
+          darkcolor=[("disabled", p["bg"]), ("pressed", p["kenar"]), ("active", p["secili"])],
           foreground=[("disabled", p["soluk"])])
-    s.configure("Accent.TButton", background=p["vurgu"], foreground=p["vurgu_metin"])
-    s.map("Accent.TButton", background=[("active", p["bilgi"]), ("disabled", p["kenar"])])
+    s.configure("Accent.TButton", background=p["vurgu"], foreground=p["vurgu_metin"],
+                bordercolor=p["vurgu"], lightcolor=p["vurgu"], darkcolor=p["vurgu"])
+    s.map("Accent.TButton", background=[("disabled", p["kenar"]), ("active", p["bilgi"])],
+          lightcolor=[("disabled", p["kenar"]), ("active", p["bilgi"])],
+          darkcolor=[("disabled", p["kenar"]), ("active", p["bilgi"])],
+          bordercolor=[("disabled", p["kenar"]), ("active", p["bilgi"])])
+    # Onay kutusu: seçiliyken vurgu rengiyle dolu kutu
+    s.configure("TCheckbutton", background=p["bg"], indicatorbackground=p["kart"],
+                indicatorforeground=p["vurgu_metin"], indicatormargin=(0, 0, 6, 0),
+                bordercolor=p["soluk"], lightcolor=p["kart"], darkcolor=p["kart"])
+    s.map("TCheckbutton", background=[("active", p["bg"])],
+          indicatorbackground=[("selected", p["vurgu"]), ("active", p["secili"])])
+    # İnce, düz kaydırma çubukları
+    for yon in ("Vertical", "Horizontal"):
+        s.configure(f"{yon}.TScrollbar", background=p["kenar"], troughcolor=p["bg"],
+                    bordercolor=p["bg"], lightcolor=p["kenar"], darkcolor=p["kenar"],
+                    arrowcolor=p["soluk"], gripcount=0, arrowsize=12, relief="flat")
+        s.map(f"{yon}.TScrollbar", background=[("active", p["soluk"])],
+              lightcolor=[("active", p["soluk"])], darkcolor=[("active", p["soluk"])])
+    s.configure("Horizontal.TProgressbar", background=p["vurgu"], troughcolor=p["kenar"],
+                bordercolor=p["kenar"], lightcolor=p["vurgu"], darkcolor=p["vurgu"])
+    s.configure("TCombobox", arrowcolor=p["soluk"], background=p["kart"], lightcolor=p["kart"],
+                darkcolor=p["kart"], selectbackground=p["kart"], selectforeground=p["metin"])
+    s.map("TCombobox", fieldbackground=[("readonly", p["kart"])], background=[("active", p["secili"])])
+    s.configure("TPanedwindow", background=p["bg"])
+    s.configure("Sash", sashthickness=6, gripcount=0, background=p["bg"], lightcolor=p["bg"],
+                darkcolor=p["bg"], bordercolor=p["bg"])
     # Kart zemini pencereyle aynı: ttk etiketleri kendi zeminlerini kartın rengine uyduramaz
     s.configure("Card.TFrame", background=p["bg"], relief="solid", borderwidth=1)
     s.configure("TEntry", fieldbackground=p["kart"], padding=4)
     s.configure("TCombobox", fieldbackground=p["kart"], padding=3)
+    s.configure("TNotebook.Tab", bordercolor=p["kenar"], lightcolor=p["bg"], darkcolor=p["bg"])
     s.configure("Treeview", background=p["kart"], fieldbackground=p["kart"], foreground=p["metin"])
     s.configure("Treeview.Heading", background=p["bg"], foreground=p["soluk"], relief="flat")
     s.map("Treeview", background=[("selected", p["secili"])], foreground=[("selected", p["metin"])])
     s.configure("TNotebook", background=p["bg"], borderwidth=0)
     s.configure("TNotebook.Tab", padding=(12, 5), background=p["bg"])
-    s.map("TNotebook.Tab", background=[("selected", p["kart"])])
+    s.map("TNotebook.Tab", background=[("selected", p["kart"])], lightcolor=[("selected", p["kart"])])
     s.configure("TLabelframe", background=p["bg"])
     s.configure("TLabelframe.Label", background=p["bg"], foreground=p["metin"])
     for ad in ("Switch.TCheckbutton", "Toggle.TButton"):
