@@ -304,7 +304,7 @@ P("Bir çalışma bitince kendiliğinden açılır: her adımın durumu, süresi
 gorsel("06_son_calisma.png", "Son çalışma sekmesi: adımlar, süreler ve üretilen dosyalar");
 
 H2("3.7 Tema ve kısayollar");
-P("Sol alttaki düğme açık ve karanlık tema arasında geçiş yapar. Görünüm `sv-ttk` paketiyle Windows 11 tarzındadır; paket yoksa aynı renklerle temel tema kullanılır.");
+P("Sol alttaki düğme açık ve karanlık tema arasında geçiş yapar. Varsayılan **sade görünüm** hızlı çizilir. İsteyen **Ayarlar → Genel → Arayüz görünümü** ile Windows 11 tarzı **modern** görünümü (`sv-ttk`) seçebilir; ancak bu tema her öğeyi resimle çizdiği için Windows'ta sayfa geçişleri ve tema değişimi belirgin yavaşlar (ölçümde 5–7 kat). Değişiklik program yeniden açılınca geçerli olur.");
 gorsel("15_karanlik_tema.png", "Karanlık tema", 520);
 tablo(["Kısayol", "İşlev"], [
   ["Ctrl+Enter", "Seçilen adımları çalıştır"],
@@ -439,6 +439,8 @@ tablo(["flag", "Anlamı"], [
   ["ULASILAMADI", "Sunucuya ulaşılamadı (zaman aşımı vb.)."],
   ["SIZDIRILMIS YEREL DOSYA YOLU", "Bağlantı bir bilgisayarın yerel diskini gösteriyor (ör. `C:\\Users\\...`): hem kırık hem bilgi sızıntısı."],
 ], [1.6, 4]);
+gorsel("20_belge_raporu.png", "Kırık belge raporu: varsayılan olarak yalnız sorunlu belgeler");
+gorsel("19_kirik_link_raporu.png", "Kırık link raporu: sorun türü, site içi/dış ve en çok kırık alan adları");
 P("`linkdenetim/broken_links.csv` kırık bağlantıları, bulunduğu sayfayı (`kaynak_sayfa`) ve butonun metnini (`buton_metni`) verir; düzeltme için hangi sayfada hangi linkin değişmesi gerektiği buradan okunur.");
 H2("7.3 Görsel/UI kusur raporu");
 P("`gorsel/gorsel_rapor.html` şablon özetlidir: bir kusur \"bu düzen ≈N sayfayı etkiliyor\" diye bir kez raporlanır, kusurlu bölge ekran görüntüsünde kırmızı kutuyla işaretlenir.");
