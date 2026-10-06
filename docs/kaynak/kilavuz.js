@@ -144,7 +144,8 @@ const CIKTILAR = {
   deneme: "deneme_output/report.html, report.xlsx, screenshots/",
   tam_test: "test_output/report.html, report.xlsx, summary.txt, results.jsonl, screenshots/",
   hatali_tekrar: "test_output/ (güncellenir)", rapor_yenile: "test_output/report.html, .xlsx, summary.txt",
-  belge: "denetim/documents_audit.csv", link: "linkdenetim/broken_links.csv",
+  belge: "denetim/belge_raporu.html, belge_denetimi_excel.csv, documents_audit.csv",
+  link: "linkdenetim/kirik_link_raporu.html, kirik_linkler_excel.csv, broken_links.csv",
   kumeleme: "template_clusters.json, template_representatives.json (site haritasının yanında)",
   gorsel: "gorsel/gorsel_rapor.html, gorsel_denetim.csv",
   rota: "routes_verification.csv", tiklama: "clicks_verification.csv",
@@ -429,6 +430,8 @@ tablo(["Genel sonuç", "Ne zaman verilir"], [
 ], [1, 4]);
 P("Raporda ayrıca ölçülen her başlık için sütunlar vardır: HTTP durum ve süre, güvenlik başlıkları (HSTS, CSP, X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy), Türkçe karakter, erişilebilirlik, mobil uyum (viewport etiketi, 375 px'te görünüm), konsol/JS hataları (React hydration hataları ayrı işaretlenir) ve formlar.");
 H2("7.2 Belge ve bağlantı denetimi");
+P("Sonuçları görmenin en kolay yolu **Raporlar ve özet** (ya da ana sayfadaki Raporlar kartı) altındaki **Kırık belge raporu** ve **Kırık link raporu** düğmeleridir. Bunlar süzülebilir, aranabilir HTML raporlar açar: belge raporu varsayılan olarak yalnız sorunlu belgeleri, link raporu kırık bağlantıları sorun türüne (404, 403, DNS, zaman aşımı…) ve site içi/dış ayrımına göre gösterir; en çok kırık bağlantı olan alan adları da listelenir. Rapor, adımın sonunda kendiliğinden üretilir; eski bir çalıştırmanın CSV'si varsa düğmeye basınca üretilir.");
+P("Excel ile çalışmak için aynı klasördeki `belge_denetimi_excel.csv` ve `kirik_linkler_excel.csv` dosyalarını açın: Türkçe Excel'de sütunlar ve karakterler doğru görünür. (Ham `documents_audit.csv` / `broken_links.csv` virgüllü olduğu için Türkçe Excel'de tek sütunda açılır; bunlar araçlar içindir.)");
 P("`denetim/documents_audit.csv` her belge bağlantısı için bir satırdır; `flag` sütunu:");
 tablo(["flag", "Anlamı"], [
   ["erisilebilir", "Belge açılıyor."],

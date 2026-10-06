@@ -11,6 +11,9 @@ from .adimlar import ADIM as ADIM_SOZLUK, ADIMLAR, Adim, harita_url_sayisi, onbe
 from .ayarlar import Klasorler
 
 
+_SORUNLU_BELGE = ("SIZDIRILMIS", "KIRIK", "ULASILAMADI")   # tester'ın documents_audit.csv işaretleri
+
+
 def cikti_durumu(adim: Adim, ayar: dict) -> Tuple[bool, Optional[datetime]]:
     """Adımın ana çıktısı var mı, en son ne zaman üretildi."""
     try:
@@ -94,11 +97,16 @@ def ozet(ayar: dict) -> List[Tuple[str, str, str]]:
         s.append((bolum, "H1 eksik", str(sum(
             1 for r in test if (r.get("accessibility") or {}).get("missing_h1")))))
 
-    for baslik, yol in (("Kırık bağlantı", k.link / "broken_links.csv"),
-                        ("Belge kaydı", k.belge / "documents_audit.csv"),
-                        ("Görsel kusur", k.gorsel / "gorsel_denetim.csv")):
-        if yol.exists():
-            s.append(("Denetimler", baslik, str(len(csv_satirlari(yol)))))
+    link = k.link / "broken_links.csv"
+    if link.exists():
+        s.append(("Denetimler", "Kırık bağlantı", str(len({r.get("url") for r in csv_satirlari(link)}))))
+    belge = k.belge / "documents_audit.csv"
+    if belge.exists():
+        tekil = {r.get("url"): r for r in csv_satirlari(belge)}
+        sorunlu = sum(1 for r in tekil.values() if (r.get("flag") or "").startswith(_SORUNLU_BELGE))
+        s.append(("Denetimler", "Belge (toplam / sorunlu)", f"{len(tekil)} / {sorunlu}"))
+    if (k.gorsel / "gorsel_denetim.csv").exists():
+        s.append(("Denetimler", "Görsel kusur", str(len(csv_satirlari(k.gorsel / "gorsel_denetim.csv")))))
 
     for baslik, yol in (("Rota doğrulama", k.rota_csv), ("Tıklama doğrulama", k.tiklama_csv)):
         if yol.exists():
@@ -157,7 +165,12 @@ def kutucuklar(ayar: dict) -> List[Tuple[str, str, str, str]]:
         kutu.append(("Test edilen", "—", "henüz test yok", ""))
     link = k.link / "broken_links.csv"
     if link.exists():
-        kutu.append(("Kırık bağlantı", sayi(len(csv_satirlari(link))), "iç + dış", "hata"))
+        kutu.append(("Kırık bağlantı", sayi(len({r.get("url") for r in csv_satirlari(link)})), "iç + dış", "hata"))
+    belge = k.belge / "documents_audit.csv"
+    if belge.exists():
+        tekil = {r.get("url"): r for r in csv_satirlari(belge)}
+        sorunlu = sum(1 for r in tekil.values() if (r.get("flag") or "").startswith(_SORUNLU_BELGE))
+        kutu.append(("Sorunlu belge", sayi(sorunlu), f"{sayi(len(tekil))} belgeden", "hata" if sorunlu else ""))
     gorsel = k.gorsel / "gorsel_denetim.csv"
     if gorsel.exists():
         kutu.append(("Görsel kusur", sayi(len(csv_satirlari(gorsel))), "şablon temsilcilerinde", ""))

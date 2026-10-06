@@ -240,6 +240,12 @@ def _tam_test(ayar):
     return komutlar
 
 
+def _denetim_raporu(tur, ayar):
+    from .denetim_raporu import adim_komutu
+    return Komut(fonksiyon=adim_komutu(tur, ayar),
+                 aciklama="Okunabilir rapor (HTML + Excel CSV)")
+
+
 def _ortam(ayar):
     from .ortam import rapor
     return [Komut(fonksiyon=lambda yaz: rapor(ayar, yaz), aciklama="Ortam kontrolü")]
@@ -311,8 +317,13 @@ def _oto_duzelt(ayar):
 
 def _teslim(ayar):
     from .teslim import paketle
-    return [Komut(fonksiyon=lambda yaz: paketle(Klasorler(ayar), yaz),
-                  aciklama="TESLIM paketini oluştur")]
+    from .denetim_raporu import belge_raporu_yolu, link_raporu_yolu
+
+    def calis(yaz):
+        link_raporu_yolu(ayar)       # eski çalıştırmalarda HTML/Excel raporu yoksa üret
+        belge_raporu_yolu(ayar)
+        return paketle(Klasorler(ayar), yaz)
+    return [Komut(fonksiyon=calis, aciklama="TESLIM paketini oluştur")]
 
 
 # ------------------------------------------------------------- adım listesi
@@ -369,12 +380,12 @@ def _adimlar() -> List[Adim]:
         # ---- Denetimler
         Adim("belge", "denetim", "Belge denetimi (PDF/Word)",
              "Belge linklerinin erişilebilirliğini ve sızdırılmış yerel yolları denetler.",
-             lambda a: [_tester(a, K(a).belge, "--check-docs", "--no-screenshots")],
-             lambda a: [K(a).belge / "documents_audit.csv"]),
+             lambda a: [_tester(a, K(a).belge, "--check-docs", "--no-screenshots"), _denetim_raporu("belge", a)],
+             lambda a: [K(a).belge / "belge_raporu.html", K(a).belge / "documents_audit.csv"]),
         Adim("link", "denetim", "Kırık link denetimi",
              "Sayfalardaki tüm iç ve dış bağlantıları kontrol eder.",
-             lambda a: [_tester(a, K(a).link, "--check-links", "--no-screenshots")],
-             lambda a: [K(a).link / "broken_links.csv"], sure="saatler"),
+             lambda a: [_tester(a, K(a).link, "--check-links", "--no-screenshots"), _denetim_raporu("link", a)],
+             lambda a: [K(a).link / "kirik_link_raporu.html", K(a).link / "broken_links.csv"], sure="saatler"),
         Adim("kumeleme", "denetim", "Şablon kümeleme",
              "URL'leri düzen imzasına göre şablonlara indirir (ÖİDB: 17 bin -> ~600), her "
              "şablondan temsilci seçer. Görsel denetim ve yerel model bu temsilcilerle çalışır.",

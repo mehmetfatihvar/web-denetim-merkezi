@@ -574,3 +574,42 @@ class ArayuzTestleri(GeciciKlasor):
         finally:
             kok.destroy()
         self.assertEqual(hatalar, [])
+
+
+class DenetimRaporuTestleri(GeciciKlasor):
+    """Kırık link / belge CSV'lerinden okunabilir rapor."""
+
+    def test_link_ve_belge_raporu(self):
+        from merkez import denetim_raporu as D
+        ayar = dict(A.VARSAYILAN, cikti_koku=str(self.t / "c"), site_url="https://ornek.edu.tr/",
+                    site_adi="Örnek")
+        k = A.Klasorler(ayar)
+        k.link.mkdir(parents=True)
+        k.belge.mkdir(parents=True)
+        (k.link / "broken_links.csv").write_text(
+            "url,status,kaynak_sayfa,buton_metni\n"
+            "https://ornek.edu.tr/yok,404,https://ornek.edu.tr/,Duyurular\n"
+            "https://dis.gov.tr/a,error: getaddrinfo ENOTFOUND dis.gov.tr,https://ornek.edu.tr/b,Mevzuat\n"
+            "https://ornek.edu.tr/yok,404,https://ornek.edu.tr/,Duyurular\n",   # yeniden çalıştırma tekrarı
+            encoding="utf-8")
+        (k.belge / "documents_audit.csv").write_text(
+            "url,status,content_type,size,source,flag,kaynak_sayfa,buton_metni\n"
+            "https://ornek.edu.tr/a.pdf,200,application/pdf,10,dom,erisilebilir,https://ornek.edu.tr/,A\n"
+            "https://ornek.edu.tr/b.pdf,404,text/html,,dom,KIRIK/ERISILEMIYOR,https://ornek.edu.tr/,B\n"
+            "file:///C:/Users/x/c.docx,file:,,,dom(file:),SIZDIRILMIS YEREL DOSYA YOLU (kirik + bilgi sizintisi),"
+            "https://ornek.edu.tr/,Ç\n", encoding="utf-8")
+        h = D.link_raporu_yolu(ayar)
+        metin = h.read_text(encoding="utf-8")
+        self.assertIn("404 Bulunamadı", metin)
+        self.assertIn("Alan adı bulunamadı (DNS)", metin)
+        self.assertEqual(metin.count('data-sorunlu="1"'), 2)          # tekrar sayılmadı
+        excel = (k.link / "kirik_linkler_excel.csv").read_bytes()
+        self.assertTrue(excel.startswith(b"\xef\xbb\xbf"))           # BOM: Excel Türkçe'yi doğru açar
+        self.assertIn("Site içi".encode(), excel)
+        b = D.belge_raporu_yolu(ayar).read_text(encoding="utf-8")
+        self.assertIn("Sızdırılmış yerel dosya yolu", b)
+        self.assertEqual(b.count('data-sorunlu="1"'), 2)
+        self.assertEqual(b.count('data-sorunlu="0"'), 1)
+        # durum özeti sorunlu belgeyi ayrı sayar
+        from merkez.durum import kutucuklar
+        self.assertIn(("Sorunlu belge", "2", "3 belgeden", "hata"), kutucuklar(ayar))

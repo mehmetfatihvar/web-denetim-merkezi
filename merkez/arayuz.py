@@ -14,7 +14,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from pathlib import Path
 
-from . import SURUM, tema, yollar
+from . import SURUM, denetim_raporu, tema, yollar
 from . import ayarlar as A
 from .adimlar import ADIM, ADIMLAR, AI_HATTI, GRUPLAR, grup_adimlari, tam_hat
 from .calistirici import Calistirici
@@ -545,6 +545,8 @@ class Uygulama:
         return [
             ("Kanıtlı test raporu", lambda: k().test / "report.html"),
             ("Deneme testi raporu", lambda: k().deneme / "report.html"),
+            ("Kırık link raporu", lambda: denetim_raporu.link_raporu_yolu(self.ayar)),
+            ("Kırık belge raporu", lambda: denetim_raporu.belge_raporu_yolu(self.ayar)),
             ("Görsel kusur raporu", lambda: k().gorsel / "gorsel_rapor.html"),
             ("Yapay zekâ son raporu", lambda: k().ai_rapor / "rapor.html"),
             ("Doğrulama özeti", lambda: k().dogrulama_cikti / "ozet.txt"),
