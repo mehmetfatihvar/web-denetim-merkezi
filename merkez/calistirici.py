@@ -98,6 +98,7 @@ class Calistirici:
         self.sorunlar: List[dict] = []
         self.son_satirlar: List[str] = []
         self.son_ilerleme = 0.0
+        self.en_cok = (None, 0)          # (toplam, biten): bu komutta görülen en büyük sayı
 
     def _adim(self, adim: Adim, ayar: dict, sira: int, toplam: int) -> str:
         try:
@@ -119,7 +120,10 @@ class Calistirici:
                 if self.durdur_istendi:
                     raise Durduruldu()
                 self.komut_no = j - 1
-                self._ilerleme_bildir(None)
+                self.en_cok = (None, 0)
+                # Önceki komut ilerleme satırı basmadan bittiyse (ör. tam testte zaten yapılmış
+                # parça) bu sıçrama gerçek iş değildir: kalan süre hesabına hız olarak girmez.
+                self._ilerleme_bildir(None, atlama=True)
                 baslik = komut.aciklama or (f"Komut {j}/{len(komutlar)}" if len(komutlar) > 1 else "")
                 if baslik:
                     self._yaz_ve_kaydet(f"── {baslik}\n")
@@ -215,18 +219,25 @@ class Calistirici:
             self.olay(kayit)
         self.olay({"tur": "sayac", "hata": self.hata_sayisi, "uyari": self.uyari_sayisi})
 
-    def _ilerleme_bildir(self, ilerleme):
-        """Adım oranı = (biten komutlar + bu komutun oranı) / komut sayısı."""
+    def _ilerleme_bildir(self, ilerleme, atlama=False):
+        """Adım oranı = (biten komutlar + bu komutun oranı) / komut sayısı.
+
+        Eşzamanlı çalışan araçlar "[i/n]" satırlarını sırasız basabilir (yavaş bir sayfa
+        geç biter). Aynı sayaç içinde sayı geri gitmez, adım oranı da hiç geri gitmez;
+        yoksa yüzde ileri geri oynar ve kalan süre bozulur.
+        """
         biten = toplam = None
         komut_orani = 0.0
         if ilerleme:
             biten, toplam = ilerleme
+            if self.en_cok[0] == toplam:
+                biten = max(biten, self.en_cok[1])
+            self.en_cok = (toplam, biten)
             komut_orani = biten / toplam
         oran = min(1.0, (self.komut_no + komut_orani) / self.komut_sayisi)
-        if ilerleme is None and oran < self.son_ilerleme:
-            oran = self.son_ilerleme
+        oran = max(oran, self.son_ilerleme)
         self.son_ilerleme = oran
-        self.tahmin.ekle(oran)
+        self.tahmin.ekle(oran, atlama=atlama)
         genel = ((self.sira - 1) + oran) / max(self.toplam, 1)
         self.olay({"tur": "ilerleme", "id": self.adim.id if self.adim else "", "biten": biten,
                    "toplam": toplam, "oran_adim": oran, "oran_genel": genel,

@@ -288,7 +288,7 @@ H2("3.6 Alt panel: ilerleme, kayıt, hatalar, son çalışma");
 H3("İlerleme paneli");
 P("Bir çalışma başlayınca alt panelde iki ilerleme çubuğu görünür:");
 madde([
-  "**Bu adım:** çalışan adımın yüzdesi, işlenen/toplam sayısı (ör. 946/2.000), parçalı testte kaçıncı parça olduğu ve **kalan süre tahmini**. Tahmin şimdiye kadarki hıza göre yapılır; sunucu yavaşlarsa değişir.",
+  "**Bu adım:** çalışan adımın yüzdesi, işlenen/toplam sayısı (ör. 946/2.000), parçalı testte kaçıncı parça olduğu ve **kalan süre tahmini**. Tahmin son 10 dakikadaki hıza göre yapılır, sunucu yavaşlar ya da hızlanırsa kendini günceller. Sayfalar eşzamanlı test edildiği için sayı, listedeki sıra değil bitirilen sayfa sayısıdır; tam testte zaten yapılmış olduğu için atlanan parçalar hız hesabına katılmaz.",
   "**Toplam:** seçilen bütün adımların genel yüzdesi.",
   "Sağ üstte **geçen süre**, kırmızı **Hata** ve sarı **Uyarı** sayaçları. Sayaçlara tıklamak hata listesini açar. Pencere başlığında da genel yüzde görünür.",
 ]);

@@ -490,6 +490,9 @@ def load_urls(source, limit, offset):
 
 
 # ------------------------------------------------------------- tek sayfa test ---
+_BITEN = [0]   # bu çalıştırmada testi biten sayfa sayısı (ilerleme satırları için)
+
+
 async def test_page(browser, url, opts, idx, total):
     rec = {
         "index": idx,
@@ -789,7 +792,10 @@ async def test_page(browser, url, opts, idx, total):
             except Exception:
                 pass
 
-    print(f"  [{idx}/{total}] {rec['overall'].upper():5} {rec['http_status']}  {url[:80]}")
+    # Sayfalar eşzamanlı test edildiği için bitiş sırası listedeki sıradan (idx) farklıdır;
+    # ilerleme olarak bitirilen sayfa sayısı basılır, böylece sayı hep artar.
+    _BITEN[0] += 1
+    print(f"  [{_BITEN[0]}/{total}] {rec['overall'].upper():5} {rec['http_status']}  {url[:80]}")
     return rec
 
 

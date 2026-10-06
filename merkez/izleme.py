@@ -9,6 +9,7 @@ Araçlar ilerlemeyi farklı biçimlerde basar; hepsi burada tanınır:
 
 import re
 import time
+from collections import deque
 from typing import Optional, Tuple
 
 ILERLEME_DESENLERI = [
@@ -79,27 +80,41 @@ class SatirBolucu:
 
 
 class SureTahmini:
-    """Oran (0-1) gözlemlerinden kalan süre. Hız, ilk gözlemden bu yana ortalamadır;
-    devam eden işlerde atlanan (hızlı geçen) kısım tahmini bozmasın diye ilk gözlemden
-    itibaren ölçülür."""
+    """Oran (0-1) gözlemlerinden kalan süre.
 
-    def __init__(self, simdi=time.monotonic):
+    Hız, son `pencere` saniyedeki ilerlemeden ölçülür (kayan pencere): sunucu yavaşlayıp
+    hızlandıkça tahmin de güncellenir, baştaki tarayıcı açılışı gibi geçici durumlar
+    tahmini sonsuza dek etkilemez.
+
+    Gerçek iş sayılmayan sıçramalar hıza katılmaz: `atlama=True` ile bildirilen artış
+    (ör. tam testte zaten yapılmış olduğu için saniyede geçen bir parça) kalan işi azaltır
+    ama "bu hızla gidiyoruz" hesabına girmez. Geri giden oran yok sayılır.
+    """
+
+    def __init__(self, simdi=time.monotonic, pencere: float = 600.0):
         self.simdi = simdi
-        self.t0 = None
-        self.o0 = 0.0
-        self.son = 0.0
+        self.pencere = pencere
+        self.son = 0.0                  # en yüksek oran (geri gitmez)
+        self.islenen = 0.0              # gerçekten çalışılarak yapılan toplam ilerleme
+        self.gozlem = deque()           # (zaman, islenen)
 
-    def ekle(self, oran: float):
+    def ekle(self, oran: float, atlama: bool = False):
         t = self.simdi()
-        if self.t0 is None or oran < self.son:
-            self.t0, self.o0 = t, oran
-        self.son = oran
+        artis = max(0.0, oran - self.son)
+        self.son = max(self.son, oran)
+        if not atlama:
+            self.islenen += artis
+        self.gozlem.append((t, self.islenen))
+        # pencerenin başını belirleyen bir gözlem hep kalsın
+        while len(self.gozlem) > 2 and self.gozlem[1][0] <= t - self.pencere:
+            self.gozlem.popleft()
 
     def kalan(self) -> Optional[float]:
-        if self.t0 is None:
+        if not self.gozlem:
             return None
-        gecen = self.simdi() - self.t0
-        ilerleme = self.son - self.o0
+        t0, i0 = self.gozlem[0]
+        gecen = self.simdi() - t0       # şu ana kadar: ilerleme durduysa tahmin uzar
+        ilerleme = self.islenen - i0
         if gecen < 5 or ilerleme <= 0:
             return None
         return (1.0 - self.son) * gecen / ilerleme

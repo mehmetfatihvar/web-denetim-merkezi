@@ -294,6 +294,43 @@ class IzlemeTestleri(unittest.TestCase):
         self.assertEqual(sure_metni(3725), "1 sa 02 dk")
         self.assertEqual(sure_metni(None), "hesaplanıyor")
 
+    def test_sirasiz_ilerleme_geri_gitmez(self):
+        """Eşzamanlı araçlar [i/n]'yi sırasız basabilir; yüzde geri gitmemeli."""
+        olaylar = []
+        kod = "for i in (1, 3, 2, 5, 4, 6):\n    print(f'  [{i}/6] PASS', flush=True)"
+        with tempfile.TemporaryDirectory() as t:
+            ayar = dict(A.VARSAYILAN, cikti_koku=t)
+            adim = Adim("x", "web", "X", "", lambda a: [Komut([sys.executable, "-c", kod])])
+            Calistirici(lambda m: None, olaylar.append).calistir([adim], ayar)
+        ilerleme = [o for o in olaylar if o["tur"] == "ilerleme" and o["biten"] is not None]
+        self.assertEqual([o["biten"] for o in ilerleme], [1, 3, 3, 5, 5, 6])
+        oranlar = [o["oran_adim"] for o in olaylar if o["tur"] == "ilerleme"]
+        self.assertEqual(oranlar, sorted(oranlar))
+
+    def test_sure_tahmini_atlama_ve_pencere(self):
+        from merkez.izleme import SureTahmini
+        saat = [0.0]
+        t = SureTahmini(simdi=lambda: saat[0])
+        t.ekle(0.0)
+        saat[0] = 1.0
+        t.ekle(0.5, atlama=True)     # zaten yapılmış parça: anında geçti, hız sayılmaz
+        saat[0] = 11.0
+        t.ekle(0.6)                  # 11 sn'de gerçekten %10 -> kalan %40 için 44 sn
+        self.assertAlmostEqual(t.kalan(), 44.0)
+        t.ekle(0.55)                 # geri giden oran yok sayılır
+        self.assertAlmostEqual(t.son, 0.6)
+
+        t = SureTahmini(simdi=lambda: saat[0], pencere=100)
+        saat[0] = 0.0
+        t.ekle(0.0)
+        saat[0] = 50.0
+        t.ekle(0.5)                  # başta hızlı ...
+        for sn in range(60, 260, 10):
+            saat[0] = float(sn)
+            t.ekle(0.5 + (sn - 50) * 0.0005)   # ... sonra 10 sn'de %0,5
+        # son 100 sn'ye göre: 0,0005/sn -> kalan (1-0,6)/0,0005 = 800 sn (baştaki hız değil)
+        self.assertAlmostEqual(t.kalan(), 800.0, delta=60)
+
     def test_calistirici_olaylari(self):
         olaylar = []
         kod = ("for i in range(1, 5):\n    print(f'  [{i}/4] PASS', flush=True)\n"
