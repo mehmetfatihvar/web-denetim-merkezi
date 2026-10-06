@@ -5,13 +5,16 @@ on:
 jobs:
   olc:
     runs-on: windows-latest
+    env:
+      PYTHONIOENCODING: utf-8
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
       - run: pip install sv-ttk
-      - run: python olcum/olc.py modern 1
-      - run: python olcum/olc.py modern 0
-      - run: python olcum/olc.py hizli 1
-      - run: python olcum/olc.py hizli 0
+      - run: python olcum/olc.py modern bos
+      - run: python olcum/olc.py hizli bos
+      - run: python olcum/olc.py modern kayit
+      - run: python olcum/olc.py modern akis
+      - run: python olcum/olc.py hizli akis
