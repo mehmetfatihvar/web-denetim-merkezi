@@ -8,6 +8,7 @@ komut satırından ve testlerden de kullanılır.
 
 import json
 import os
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
@@ -64,8 +65,38 @@ def _py(ayar, betik, *argumanlar, cwd=yollar.ARACLAR, aciklama=""):
                  aciklama=aciklama)
 
 
+_ONBELLEK = {}
+_ONBELLEK_KILIT = threading.Lock()
+
+
+def onbellekli(yol: Path, oku):
+    """Dosyadan türetilen değeri, dosya değişene kadar (boyut + zaman) yeniden okumadan verir.
+
+    Site haritası ve test sonuçları onbinlerce kayıt olabilir; arayüz her sayfa açılışında
+    bunları baştan okursa takılır.
+    """
+    try:
+        st = Path(yol).stat()
+    except OSError:
+        return oku(yol)
+    anahtar = (str(yol), oku.__name__)
+    imza = (st.st_mtime_ns, st.st_size)
+    with _ONBELLEK_KILIT:
+        kayit = _ONBELLEK.get(anahtar)
+    if kayit and kayit[0] == imza:
+        return kayit[1]
+    deger = oku(yol)
+    with _ONBELLEK_KILIT:
+        _ONBELLEK[anahtar] = (imza, deger)
+    return deger
+
+
 def harita_url_sayisi(harita: Path) -> int:
     """Site haritasındaki URL sayısı (tester'ın okuduğu biçimlerin hepsi)."""
+    return onbellekli(harita, _harita_say)
+
+
+def _harita_say(harita: Path) -> int:
     try:
         veri = json.loads(Path(harita).read_text(encoding="utf-8"))
     except (OSError, ValueError):

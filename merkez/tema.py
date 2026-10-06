@@ -47,12 +47,17 @@ def konsol_yazisi():
     return "TkFixedFont"
 
 
-def uygula(kok: tk.Tk, ad: str) -> dict:
-    """Temayı uygular, paleti döndürür."""
+def uygula(kok: tk.Tk, ad: str, hizli: bool = False) -> dict:
+    """Temayı uygular, paleti döndürür.
+
+    hizli=True: sv-ttk yerine yerleşik 'clam' teması. sv-ttk her öğeyi resimlerle çizer;
+    bazı Windows bilgisayarlarda (özellikle yüksek ölçeklemede) sayfa geçişi ve pencere
+    boyutlandırma bu yüzden kasar. Sade görünüm aynı renklerle yaklaşık iki kat hızlı çizer.
+    """
     ad = "dark" if ad == "dark" else "light"
     p = PALET[ad]
     s = ttk.Style(kok)
-    if sv_ttk is not None:
+    if sv_ttk is not None and not hizli:
         sv_ttk.set_theme(ad)
     else:
         _clam_boya(s, p)

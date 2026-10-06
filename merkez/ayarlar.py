@@ -76,6 +76,7 @@ GENEL_VARSAYILAN = {
     "python": sys.executable,
     "hata_olursa_devam": False,
     "ayrintili": False,
+    "gorunum": "modern",         # modern: sv-ttk (Windows 11 görünümü) | hizli: sade ve hızlı çizim
     "tema": "light",             # arayüz: light | dark          # hata ayıklama: komut ayrıntıları + Bologna -v
     # Sağlayıcılar
     "anthropic_key": "",

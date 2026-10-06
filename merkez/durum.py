@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Tuple
 
-from .adimlar import ADIM as ADIM_SOZLUK, ADIMLAR, Adim, harita_url_sayisi
+from .adimlar import ADIM as ADIM_SOZLUK, ADIMLAR, Adim, harita_url_sayisi, onbellekli
 from .ayarlar import Klasorler
 
 
@@ -23,6 +23,10 @@ def cikti_durumu(adim: Adim, ayar: dict) -> Tuple[bool, Optional[datetime]]:
 
 def csv_satirlari(yol: Path) -> List[dict]:
     """';' veya ',' ayraçlı CSV'yi okur (araçlar ikisini de kullanıyor)."""
+    return onbellekli(yol, _csv_oku)
+
+
+def _csv_oku(yol: Path) -> List[dict]:
     try:
         with open(yol, encoding="utf-8-sig", newline="") as f:
             ilk = f.readline()
@@ -34,6 +38,10 @@ def csv_satirlari(yol: Path) -> List[dict]:
 
 
 def _jsonl(yol: Path) -> List[dict]:
+    return onbellekli(yol, _jsonl_oku)
+
+
+def _jsonl_oku(yol: Path) -> List[dict]:
     kayitlar = {}
     try:
         with open(yol, encoding="utf-8") as f:
@@ -42,7 +50,14 @@ def _jsonl(yol: Path) -> List[dict]:
                     r = json.loads(satir)
                 except ValueError:
                     continue
-                kayitlar[r.get("url")] = r     # aynı URL tekrar test edildiyse sonuncusu
+                if not isinstance(r, dict):
+                    continue
+                # aynı URL tekrar test edildiyse sonuncusu; özet için gereken alanlar yeter
+                # (kayıtlar büyük olabilir, önbellekte bellek şişmesin)
+                kayitlar[r.get("url")] = {
+                    "url": r.get("url"), "overall": r.get("overall"), "http_status": r.get("http_status"),
+                    "js_errors": bool(r.get("js_errors")),
+                    "accessibility": {"missing_h1": bool((r.get("accessibility") or {}).get("missing_h1"))}}
     except OSError:
         return []
     return list(kayitlar.values())

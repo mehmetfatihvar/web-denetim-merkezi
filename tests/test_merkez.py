@@ -448,3 +448,29 @@ class DurdurmaTestleri(GeciciKlasor):
         self.assertFalse(t.is_alive(), "durdurulan süreç kapanmadı")
         self.assertLess(time.time() - bas, 20)
         self.assertEqual(sonuc, [False])
+
+
+class OnbellekTestleri(GeciciKlasor):
+    """Arayüz durum dosyalarını önbellekten okur; dosya değişince yeniden okunmalı."""
+
+    def test_dosya_degisince_yeniden_okunur(self):
+        from merkez.durum import _jsonl
+        yol = self.t / "results.jsonl"
+        yol.write_text(json.dumps({"url": "a", "overall": "pass", "http_status": 200}) + "\n", encoding="utf-8")
+        self.assertEqual(len(_jsonl(yol)), 1)
+        self.assertIs(_jsonl(yol), _jsonl(yol))        # değişmedi: aynı nesne, yeniden okunmadı
+        with open(yol, "a", encoding="utf-8") as f:
+            f.write(json.dumps({"url": "b", "overall": "fail", "http_status": 404,
+                                "js_errors": ["x"], "evidence": {"html": "uzun"}}) + "\n")
+        kayitlar = _jsonl(yol)
+        self.assertEqual(len(kayitlar), 2)
+        self.assertTrue(kayitlar[1]["js_errors"])
+        self.assertNotIn("evidence", kayitlar[1])      # önbellekte yalnız özet alanları
+
+    def test_harita_sayisi_guncellenir(self):
+        yol = self.t / "harita.json"
+        yol.write_text(json.dumps({"url_list": ["a", "b"]}), encoding="utf-8")
+        self.assertEqual(harita_url_sayisi(yol), 2)
+        yol.write_text(json.dumps({"url_list": ["a", "b", "c"]}), encoding="utf-8")
+        self.assertEqual(harita_url_sayisi(yol), 3)
+        self.assertEqual(harita_url_sayisi(self.t / "yok.json"), 0)

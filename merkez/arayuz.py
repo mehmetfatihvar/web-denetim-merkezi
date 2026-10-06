@@ -130,6 +130,9 @@ GENEL_ALANLARI = [
     ]),
     ("Genel", [
         ("python", "Python yorumlayıcısı", "dosya", "Araçları çalıştıracak Python.", None),
+        ("gorunum", "Arayüz görünümü", "secim",
+         "hizli: sade ama hızlı çizim; arayüz yavaşsa seçin. Programı yeniden açınca geçerli olur.",
+         ["modern", "hizli"]),
         ("ayrintili", "Ayrıntılı kayıt (hata ayıklama)", "evet",
          "Her komutun klasörü, ortamı ve argümanları kayda yazılır; Bologna -v ile çalışır.", None),
     ]),
@@ -172,6 +175,16 @@ def _kisa_yol(p: Path) -> str:
         return str(p)
 
 
+def _sar(etiketler, genislik):
+    """Etiketlerin satır kaydırma genişliğini ayarlar. Yalnızca belirgin değişimde yazar:
+    her piksel değişiminde yazmak yeniden yerleşime, o da yeni <Configure> olayına yol açar
+    ve pencere boyutlandırılırken arayüzü kasar."""
+    genislik = max(int(genislik), 200)
+    for e in etiketler:
+        if abs(int(str(e.cget("wraplength") or 0)) - genislik) >= 8:
+            e.configure(wraplength=genislik)
+
+
 class KaydirmaliCerceve(ttk.Frame):
     """İçeriği dikey kaydırılabilen çerçeve."""
     hepsi = []
@@ -181,7 +194,7 @@ class KaydirmaliCerceve(ttk.Frame):
         self.tuval = tk.Canvas(self, highlightthickness=0, borderwidth=0)
         cubuk = ttk.Scrollbar(self, orient="vertical", command=self.tuval.yview)
         self.ic = ttk.Frame(self.tuval)
-        self.ic.bind("<Configure>", lambda e: self.tuval.configure(scrollregion=self.tuval.bbox("all")))
+        self.ic.bind("<Configure>", lambda e: self.tuval.configure(scrollregion=(0, 0, e.width, e.height)))
         pencere = self.tuval.create_window((0, 0), window=self.ic, anchor="nw")
         self.tuval.bind("<Configure>", lambda e: self.tuval.itemconfigure(pencere, width=e.width))
         self.tuval.configure(yscrollcommand=cubuk.set)
@@ -227,7 +240,8 @@ class Uygulama:
         kok.title(f"Web Denetim Merkezi {SURUM}")
         kok.geometry("1320x900")
         kok.minsize(1040, 700)
-        self.p = tema.uygula(kok, self.ayar.get("tema", "light"))
+        self.hizli = self.ayar.get("gorunum") == "hizli"
+        self.p = tema.uygula(kok, self.ayar.get("tema", "light"), self.hizli)
         self.yazi = tema.yazi_ailesi()
         self._iskelet()
         self._profil_yukle_arayuze()
@@ -308,7 +322,7 @@ class Uygulama:
         self.tema_dugmesi.bind("<Button-1>", lambda _: (self.tema_var.set(not self.tema_var.get()),
                                                         self._tema_degistir()))
         self.yan_etiketler.append((self.tema_dugmesi, "menu"))
-        surum = tk.Label(y, text=f"Sürüm {SURUM}" + ("" if tema.sv_ttk_var() else " · temel tema"),
+        surum = tk.Label(y, text=f"Sürüm {SURUM}" + ("" if tema.sv_ttk_var() and not self.hizli else " · sade görünüm"),
                          anchor="w")
         surum.pack(side="bottom", fill="x", padx=22)
         self.yan_etiketler.append((surum, "kucuk"))
@@ -345,7 +359,7 @@ class Uygulama:
         self.sayfa_basligi.pack(anchor="w")
         self.sayfa_alt = ttk.Label(sol, text="", style="Soluk.TLabel", wraplength=520, justify="left")
         self.sayfa_alt.pack(anchor="w")
-        sol.bind("<Configure>", lambda e: self.sayfa_alt.configure(wraplength=max(e.width - 10, 200)))
+        sol.bind("<Configure>", lambda e: _sar([self.sayfa_alt], e.width - 10))
         self.calistir_dugmesi = ttk.Button(sag, text="▶  Seçilenleri çalıştır", style="Accent.TButton",
                                            command=self._secilenleri_calistir)
         self.calistir_dugmesi.grid(row=0, column=0, padx=(0, 6))
@@ -380,7 +394,10 @@ class Uygulama:
                "raporlar": "Çıktılardan özet sayılar ve raporlar.",
                "ayarlar": "Site profili seçili siteye, diğer ayarlar tüm sitelere uygulanır."}
         self.sayfa_alt.configure(text=alt.get(ad, SAYFA_ACIKLAMA.get(ad, "")))
+        if ad in self.listeler:
+            self._ayrinti_goster(ad)
         if ad in ("ana", "raporlar"):
+            self._ana_sayfayi_doldur()
             self._durumu_yenile()
 
     def _menu_uzerinde(self, ad, uzerinde):
@@ -403,8 +420,7 @@ class Uygulama:
         self.uyari_metni = ttk.Label(self.uyari_karti, text="", style="Uyari.TLabel", justify="left",
                                      wraplength=600)
         self.uyari_metni.pack(side="left", anchor="w", fill="x", expand=True)
-        self.uyari_metni.bind("<Configure>", lambda e: self.uyari_metni.configure(
-            wraplength=max(e.width - 10, 200)))
+        self.uyari_metni.bind("<Configure>", lambda e: _sar([self.uyari_metni], e.width - 10))
         self.kutu_cercevesi = ttk.Frame(f)
         self.kutu_cercevesi.pack(fill="x", pady=(0, 12))
 
@@ -468,10 +484,20 @@ class Uygulama:
             ("Çıktı klasörü", lambda: k().kok),
         ]
 
-    def _ana_sayfayi_doldur(self):
+    def _ana_sayfayi_doldur(self, zorla=False):
+        """Kutucuklar ve yol haritası son durum verisinden kurulur; veri değişmediyse dokunulmaz."""
+        veri = getattr(self, "_son_durum", None)
+        if veri is None:
+            return
+        imza = (veri["kutular"], veri["yol"])
+        if not zorla and imza == getattr(self, "_ana_imza", None):
+            for d, fn in self.rapor_dugmeleri:
+                d.configure(state="normal" if fn().exists() else "disabled")
+            return
+        self._ana_imza = imza
         for w in self.kutu_cercevesi.winfo_children():
             w.destroy()
-        for i, (baslik, deger, alt, vurgu) in enumerate(kutucuklar(self.ayar)):
+        for i, (baslik, deger, alt, vurgu) in enumerate(veri["kutular"]):
             kutu = ttk.Frame(self.kutu_cercevesi, style="Card.TFrame", padding=(16, 12))
             kutu.grid(row=0, column=i, sticky="nsew", padx=(0 if i == 0 else 10, 0))
             self.kutu_cercevesi.columnconfigure(i, weight=1, uniform="kutu")
@@ -483,7 +509,7 @@ class Uygulama:
         for w in self.yol_cercevesi.winfo_children():
             w.destroy()
         onerilen = None
-        for i, (baslik, aciklama, tamam, ayrinti, ids) in enumerate(yol_haritasi(self.ayar)):
+        for i, (baslik, aciklama, tamam, ayrinti, ids) in enumerate(veri["yol"]):
             if not tamam and onerilen is None:
                 onerilen = i
             satir = ttk.Frame(self.yol_cercevesi, padding=(0, 6))
@@ -558,8 +584,7 @@ class Uygulama:
                                      "'Seçilenleri çalıştır'ı kullanın. Çift tıklama adımı çalıştırır.",
                           style="Soluk.TLabel", wraplength=380, justify="left")
         ipucu.pack(side="bottom", anchor="w")
-        kart.bind("<Configure>", lambda e, ls=(baslik, aciklama, ciktilar, ipucu): [
-            l.configure(wraplength=max(e.width - 40, 200)) for l in ls])
+        kart.bind("<Configure>", lambda e, ls=(baslik, aciklama, ciktilar, ipucu): _sar(ls, e.width - 40))
         self.ayrinti[grup] = dict(baslik=baslik, durum=durum, aciklama=aciklama, ciktilar=ciktilar,
                                   calistir=calistir, cikti=cikti, klasor=klasor)
         ilk = grup_adimlari(grup)[0].id
@@ -624,13 +649,15 @@ class Uygulama:
         return "Çıktı yok" if ADIM[adim_id].ciktilar(self.ayar) else ""
 
     def _listeleri_yenile(self):
-        self._cikti_zamanlari = adim_durumlari(self.ayar)
         for grup, t in self.listeler.items():
             for adim in grup_adimlari(grup):
-                t.set(adim.id, "durum", self._durum_metni(adim.id))
+                metin = self._durum_metni(adim.id)
+                if t.set(adim.id, "durum") != metin:
+                    t.set(adim.id, "durum", metin)
                 durum = self.adim_durumu.get(adim.id, (None,))[0]
                 t.item(adim.id, tags=(durum,) if durum else ())
-            self._ayrinti_goster(grup)
+            if grup == self.etkin_sayfa:
+                self._ayrinti_goster(grup)
 
     # ================================================================ raporlar ve ayarlar
     def _raporlar_sayfasi(self):
@@ -836,7 +863,7 @@ class Uygulama:
     # ================================================================ tema
     def _tema_degistir(self):
         self.ayar["tema"] = "dark" if self.tema_var.get() else "light"
-        self.p = tema.uygula(self.kok, self.ayar["tema"])
+        self.p = tema.uygula(self.kok, self.ayar["tema"], self.hizli)
         self._tema_renkleri()
         A.kaydet(self.ayar)
         self._durumu_yenile()
@@ -862,7 +889,7 @@ class Uygulama:
             t.tag_configure("baslangic", foreground=p["bilgi"])
         tema.windows_basligi(self.kok, self.ayar.get("tema") == "dark")
         if self.etkin_sayfa == "ana":
-            self._ana_sayfayi_doldur()
+            self._ana_sayfayi_doldur(zorla=True)
 
     # ================================================================ ayarlar
     def _formu_doldur(self):
@@ -915,6 +942,8 @@ class Uygulama:
         A.kaydet(self.ayar)
         self._profil_yukle_arayuze(formu_doldur=False)
         self._yaz(f"Ayarlar kaydedildi (profil: {self.ayar['aktif_profil']}).\n")
+        if (self.ayar.get("gorunum") == "hizli") != self.hizli:
+            messagebox.showinfo("Görünüm", "Yeni görünüm program yeniden açılınca geçerli olur.")
 
     def _profil_yukle_arayuze(self, formu_doldur=True):
         self.profil_secim.configure(values=A.profiller())
@@ -1091,13 +1120,39 @@ class Uygulama:
 
     # ================================================================ durum
     def _durumu_yenile(self):
+        """Durum çıktı dosyalarından hesaplanır. Site haritası ve test sonuçları büyük olabilir;
+        arayüz donmasın diye hesap arka planda yapılır, sonuç kuyrukla gelir (_durumu_uygula)."""
+        self._durum_kusagi = getattr(self, "_durum_kusagi", 0) + 1
+        kusak, ayar = self._durum_kusagi, dict(self.ayar)
+
+        def hesapla():
+            try:
+                veri = {"zamanlar": adim_durumlari(ayar), "kutular": kutucuklar(ayar),
+                        "yol": yol_haritasi(ayar), "ozet": ozet(ayar)}
+            except Exception as e:      # bozuk bir çıktı dosyası arayüzü düşürmesin
+                veri = {"hata": f"{type(e).__name__}: {e}"}
+            self.kuyruk.put(("durum", kusak, veri))
+
+        threading.Thread(target=hesapla, daemon=True).start()
+
+    def _durumu_uygula(self, kusak, veri):
+        if kusak != self._durum_kusagi:      # bu arada yenisi istendi
+            return
+        if "hata" in veri:
+            self._yaz(f"Durum okunamadı: {veri['hata']}\n")
+            return
+        self._cikti_zamanlari = veri["zamanlar"]
         self._listeleri_yenile()
+        eski = getattr(self, "_son_durum", None)
+        self._son_durum = veri
         if self.etkin_sayfa == "ana":
             self._ana_sayfayi_doldur()
+        if eski is not None and eski["ozet"] == veri["ozet"]:
+            return
         t = self.ozet_tablo
         t.delete(*t.get_children())
         bolumler = {}
-        for bolum, baslik, deger in ozet(self.ayar):
+        for bolum, baslik, deger in veri["ozet"]:
             if bolum not in bolumler:
                 bolumler[bolum] = t.insert("", "end", text=bolum, open=True)
             t.insert(bolumler[bolum], "end", text=baslik, values=(deger,))
@@ -1110,13 +1165,34 @@ class Uygulama:
         self.kuyruk.put(("olay", olay))
 
     def _kuyrugu_bosalt(self):
+        """Arka plandan gelen iletileri işler. Araçlar saniyede yüzlerce satır yazabilir:
+        satırlar tek seferde eklenir, ilerleme ve sayaçtan yalnız sonuncusu çizilir ve her tur
+        en fazla ~40 ms sürer; kalan iletiler bir sonraki tura kalır, pencere donmaz."""
+        bas = time.monotonic()
+        metin, bekleyen = [], {}       # bekleyen: 'ilerleme' / 'sayac' olaylarının sonuncusu
+
+        def bosalt():
+            if metin:
+                self._yaz("".join(metin))
+                metin.clear()
+            for tur in ("ilerleme", "sayac"):
+                if tur in bekleyen:
+                    self._olay(bekleyen.pop(tur))
+
         try:
-            for _ in range(500):
+            while time.monotonic() - bas < 0.04:
                 ileti = self.kuyruk.get_nowait()
                 if ileti[0] == "yaz":
-                    self._yaz(ileti[1])
-                elif ileti[0] == "olay":
+                    metin.append(ileti[1])
+                    continue
+                if ileti[0] == "olay" and ileti[1]["tur"] in ("ilerleme", "sayac"):
+                    bekleyen[ileti[1]["tur"]] = ileti[1]
+                    continue
+                bosalt()               # sıra korunur: önceki satırlar ve ilerleme önce
+                if ileti[0] == "olay":
                     self._olay(ileti[1])
+                elif ileti[0] == "durum":
+                    self._durumu_uygula(ileti[1], ileti[2])
                 elif ileti[0] == "ortam":
                     self._ortam_uyarisi(ileti[1])
                 elif ileti[0] == "bitti":
@@ -1129,12 +1205,16 @@ class Uygulama:
                     self.durdur_dugmesi.configure(state="disabled")
                     self.calistir_dugmesi.configure(state="normal")
                     self.calisma_bas = None
-                    self.kok.title(f"Web Denetim Merkezi {SURUM}")
+                    self._baslik(f"Web Denetim Merkezi {SURUM}")
                     self._durumu_yenile()
                     self.kok.bell()
         except queue.Empty:
             pass
-        self.kok.after(100, self._kuyrugu_bosalt)
+        finally:
+            try:
+                bosalt()
+            finally:
+                self.kok.after(30 if not self.kuyruk.empty() else 100, self._kuyrugu_bosalt)
 
     def _olay(self, o):
         tur = o["tur"]
@@ -1166,7 +1246,7 @@ class Uygulama:
                 self._adim_durum(o["id"], "baslangic", f"● %{o['oran_adim'] * 100:.0f}")
             self.genel_cubugu["value"] = o["oran_genel"] * 1000
             self.genel_yuzde.configure(text=f"%{o['oran_genel'] * 100:.1f} genel")
-            self.kok.title(f"%{o['oran_genel'] * 100:.0f} · Web Denetim Merkezi")
+            self._baslik(f"%{o['oran_genel'] * 100:.0f} · Web Denetim Merkezi")
         elif tur == "sorun":
             self._sorun_ekle(o)
         elif tur == "sayac":
@@ -1183,6 +1263,11 @@ class Uygulama:
                                             "durdu": "durduruldu"}[o["sonuc"]] + f" ({sure_metni(o['sure_sn'])})")
         elif tur == "bitti":
             self._sonuclari_goster(o["sonuclar"], o["tamam"])
+
+    def _baslik(self, metin):
+        if metin != getattr(self, "_son_baslik", None):
+            self._son_baslik = metin
+            self.kok.title(metin)
 
     def _adim_durum(self, adim_id, durum, metin):
         self.adim_durumu[adim_id] = (durum, metin)
@@ -1217,7 +1302,8 @@ class Uygulama:
             o["zaman"], "Hata" if o["seviye"] == "hata" else "Uyarı", o["ad"], o["satir"]))
         if isaret:
             self.sorun_isaretleri[oge] = isaret
-        n = len(self.sorun_tablo.get_children())
+        self.sorun_tablo_sayisi = getattr(self, "sorun_tablo_sayisi", 0) + 1
+        n = self.sorun_tablo_sayisi
         self.alt_defter.tab(self.sorun_sekmesi, text=f"  Hatalar ve uyarılar ({n})  ")
 
     def _sorunu_goster(self):
@@ -1238,6 +1324,7 @@ class Uygulama:
     def _sorunlari_temizle(self):
         self.sorun_tablo.delete(*self.sorun_tablo.get_children())
         self.sorun_isaretleri.clear()
+        self.sorun_tablo_sayisi = 0
         self.alt_defter.tab(self.sorun_sekmesi, text="  Hatalar ve uyarılar (0)  ")
 
     def _sorunlari_kopyala(self):
