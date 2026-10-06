@@ -474,3 +474,47 @@ class OnbellekTestleri(GeciciKlasor):
         yol.write_text(json.dumps({"url_list": ["a", "b", "c"]}), encoding="utf-8")
         self.assertEqual(harita_url_sayisi(yol), 3)
         self.assertEqual(harita_url_sayisi(self.t / "yok.json"), 0)
+
+
+def _ekran_var():
+    try:
+        import tkinter
+        k = tkinter.Tk()
+        k.destroy()
+        return True
+    except Exception:       # tkinter yok ya da ekran yok (Linux CI)
+        return False
+
+
+@unittest.skipUnless(_ekran_var(), "ekran/tkinter yok")
+class ArayuzTestleri(GeciciKlasor):
+    """Pencere açılır, sayfalar arasında geçilir, boyut değişir (Windows'ta çizim dondurma dahil)."""
+
+    def test_sayfa_gecisi_ve_boyutlandirma(self):
+        import tkinter as tk
+        from merkez import arayuz
+        ayar = A.yukle(self.ayar_dosyasi, self.profiller)
+        ayar["cikti_koku"] = str(self.t / "cikti")
+        kok = tk.Tk()
+        hatalar = []
+        kok.report_callback_exception = lambda *a: hatalar.append(a[1])
+        try:
+            app = arayuz.Uygulama(kok, ayar)
+            kok.update()
+            self.assertEqual(kok.state(), "normal")
+            for ad in list(app.sayfalar) + ["ana", "ayarlar", "web"]:
+                app._sayfa_ac(ad)
+                kok.update()
+                self.assertEqual(app.etkin_sayfa, ad)
+                # öndeki sayfa içerik alanını kaplar, arkadakiler sabit boyutta bekler
+                self.assertEqual(float(app.sayfalar[ad].place_info()["relwidth"]), 1.0)
+                self.assertTrue(all(float(s.place_info()["relwidth"]) == 0
+                                    for a, s in app.sayfalar.items() if a != ad))
+            for g in ("1100x760", "1400x900"):
+                kok.geometry(g)
+                kok.update()
+            self.assertEqual(app.sayfalar["web"].winfo_width(), app.icerik.winfo_width())
+            self.assertFalse(any(arayuz._CizimiDondur.derinlik.values()))
+        finally:
+            kok.destroy()
+        self.assertEqual(hatalar, [])

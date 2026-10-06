@@ -185,6 +185,50 @@ def _sar(etiketler, genislik):
             e.configure(wraplength=genislik)
 
 
+class _CizimiDondur:
+    """Windows'ta bir alanın ekrana çizimini geçici olarak durdurur, sonra tek seferde gösterir.
+
+    Tk Windows'ta her öğeyi ayrı bir pencere olarak çizer; sayfa değişirken ya da kutular yeniden
+    kurulurken öğeler tek tek görünür ve düzen "yavaş yavaş genişliyor" gibi görünür. Bu sırada
+    WM_SETREDRAW ile çizim kapatılır, iş bitince alan bir kerede yeniden çizilir.
+    Başka sistemlerde hiçbir şey yapmaz.
+    """
+
+    derinlik = {}                       # iç içe kullanımda yalnız en dıştaki açar/kapatır
+
+    def __init__(self, w):
+        self.w = w
+        self.hwnd = None
+
+    def __enter__(self):
+        anahtar = str(self.w)
+        _CizimiDondur.derinlik[anahtar] = _CizimiDondur.derinlik.get(anahtar, 0) + 1
+        if _CizimiDondur.derinlik[anahtar] == 1 and os.name == "nt":
+            try:
+                import ctypes
+                self.user32 = ctypes.windll.user32
+                self.hwnd = self.w.winfo_id()
+                self.user32.SendMessageW(self.hwnd, 0x000B, 0, 0)        # WM_SETREDRAW = FALSE
+            except Exception:
+                self.hwnd = None
+        return self
+
+    def __exit__(self, *_):
+        _CizimiDondur.derinlik[str(self.w)] -= 1
+        if self.hwnd is None:
+            return False
+        try:
+            self.w.update_idletasks()       # yerleşim ve çizim hesapları ekran kapalıyken biter
+        finally:
+            try:
+                self.user32.SendMessageW(self.hwnd, 0x000B, 1, 0)    # WM_SETREDRAW = TRUE
+                # RDW_INVALIDATE | RDW_ERASE | RDW_ALLCHILDREN | RDW_UPDATENOW | RDW_FRAME
+                self.user32.RedrawWindow(self.hwnd, None, None, 0x0001 | 0x0004 | 0x0080 | 0x0100 | 0x0400)
+            except Exception:
+                pass
+        return False
+
+
 class KaydirmaliCerceve(ttk.Frame):
     """İçeriği dikey kaydırılabilen çerçeve."""
     hepsi = []
@@ -237,6 +281,7 @@ class Uygulama:
         self.menu_ogeleri = {}           # sayfa adı -> etiket
         self.etkin_sayfa = None
 
+        kok.withdraw()                   # düzen oturana kadar gizli: öğeler tek tek belirmesin
         kok.title(f"Web Denetim Merkezi {SURUM}")
         kok.geometry("1320x900")
         kok.minsize(1040, 700)
@@ -247,6 +292,8 @@ class Uygulama:
         self._profil_yukle_arayuze()
         self._sayfa_ac("ana")
         self._tema_renkleri()
+        kok.update_idletasks()
+        kok.deiconify()
         kok.after(200, self._bolmeyi_ayarla)
         self.ortam_sorunlari = []
         threading.Thread(target=self._ortami_denetle, daemon=True).start()
@@ -277,6 +324,11 @@ class Uygulama:
             self.sayfalar[grup] = self._grup_sayfasi(grup)
         self.sayfalar["raporlar"] = self._raporlar_sayfasi()
         self.sayfalar["ayarlar"] = self._ayarlar_sayfasi()
+        # Bütün sayfalar aynı yerde üst üste durur ve bir kez yerleşir; sayfa geçişinde yalnızca
+        # öndeki değişir. (Her geçişte gizle/göster yapmak Windows'ta düzenin parça parça
+        # kurulmasına ve geçişin yavaş görünmesine yol açıyordu.)
+        for sayfa in self.sayfalar.values():
+            sayfa.place(x=0, y=0, relwidth=1, relheight=1)
 
     def _yan_menu(self, ust):
         # Sol menü klasik Tk öğeleriyle: arka plan ve seçili satır rengi her temada tam denetlenir
@@ -381,10 +433,26 @@ class Uygulama:
             self.bolme.sashpos(0, int(h * oran))
 
     def _sayfa_ac(self, ad):
-        if self.etkin_sayfa:
-            self.sayfalar[self.etkin_sayfa].pack_forget()
-        self.etkin_sayfa = ad
-        self.sayfalar[ad].pack(fill="both", expand=True)
+        with _CizimiDondur(self.icerik):
+            self._sayfa_degistir(ad)
+
+    def _sayfa_degistir(self, ad):
+        onceki, self.etkin_sayfa = self.etkin_sayfa, ad
+        # Arkadaki sayfalar o anki boyutlarında sabitlenir: pencere boyutlanırken yeniden
+        # yerleşmezler. Öne gelen sayfa alanı kaplar (boyut değişmediyse hiç yeniden yerleşmez).
+        for adi, sayfa in self.sayfalar.items():
+            if adi != ad and float(sayfa.place_info().get("relwidth") or 0) > 0:
+                sayfa.place_configure(relwidth=0, relheight=0, width=max(sayfa.winfo_width(), 1),
+                                      height=max(sayfa.winfo_height(), 1))
+        self.sayfalar[ad].place_configure(relwidth=1, relheight=1, width=0, height=0)
+        self.sayfalar[ad].tkraise()
+        if onceki and onceki != ad:           # klavye odağı arkada kalan sayfada kalmasın
+            try:
+                odak = self.kok.focus_get()
+            except (KeyError, tk.TclError):   # tkinter: açık açılır listede focus_get hata verebilir
+                odak = None
+            if odak is not None and str(odak).startswith(str(self.sayfalar[onceki])):
+                self.sayfalar[ad].focus_set()
         for a in self.menu_ogeleri:
             self._menu_boya(a)
         basliklar = dict(GRUPLAR)
@@ -495,6 +563,10 @@ class Uygulama:
                 d.configure(state="normal" if fn().exists() else "disabled")
             return
         self._ana_imza = imza
+        with _CizimiDondur(self.icerik):
+            self._ana_sayfayi_kur(veri)
+
+    def _ana_sayfayi_kur(self, veri):
         for w in self.kutu_cercevesi.winfo_children():
             w.destroy()
         for i, (baslik, deger, alt, vurgu) in enumerate(veri["kutular"]):
