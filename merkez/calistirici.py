@@ -230,6 +230,10 @@ class Calistirici:
         komut_orani = 0.0
         if ilerleme:
             biten, toplam = ilerleme
+            if self.en_cok[0] is None:
+                # Komutun ilk ilerleme satırı: kaldığı yerden devam eden araçlar doğrudan
+                # "[500/1000]" ile başlar; önceden yapılmış kısım hız sayılmaz.
+                atlama = True
             if self.en_cok[0] == toplam:
                 biten = max(biten, self.en_cok[1])
             self.en_cok = (toplam, biten)

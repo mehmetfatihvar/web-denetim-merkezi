@@ -307,6 +307,17 @@ class IzlemeTestleri(unittest.TestCase):
         oranlar = [o["oran_adim"] for o in olaylar if o["tur"] == "ilerleme"]
         self.assertEqual(oranlar, sorted(oranlar))
 
+    def test_devam_eden_aracin_ilk_satiri_hiz_sayilmaz(self):
+        """'[5/10]' ile başlayan (yarısı önceden yapılmış) araçta ilk yarı hıza katılmaz."""
+        kod = "for i in (5, 6, 7):\n    print(f'  [{i}/10] PASS', flush=True)"
+        with tempfile.TemporaryDirectory() as t:
+            ayar = dict(A.VARSAYILAN, cikti_koku=t)
+            adim = Adim("x", "web", "X", "", lambda a: [Komut([sys.executable, "-c", kod])])
+            c = Calistirici(lambda m: None, lambda o: None)
+            c.calistir([adim], ayar)
+        self.assertAlmostEqual(c.tahmin.son, 0.7)
+        self.assertAlmostEqual(c.tahmin.islenen, 0.2)     # yalnız 5 -> 7 çalışılarak yapıldı
+
     def test_sure_tahmini_atlama_ve_pencere(self):
         from merkez.izleme import SureTahmini
         saat = [0.0]

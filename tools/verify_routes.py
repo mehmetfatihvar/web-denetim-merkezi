@@ -157,10 +157,13 @@ async def main():
         context = await browser.new_context(ignore_https_errors=True, locale="tr-TR")
         sem = asyncio.Semaphore(opts.concurrency)
 
+        biten = [0]   # eşzamanlı bittiği için listedeki sıra (i) değil, bitirilen sayı basılır
+
         async def guarded(u, i):
             async with sem:
                 r = await verify_one(context, u, opts.timeout)
-                print(f"  [{i}/{len(urls)}] {r['verdict']:28} {u[:80]}")
+                biten[0] += 1
+                print(f"  [{biten[0]}/{len(urls)}] {r['verdict']:28} {u[:80]}")
                 return r
         tasks = [guarded(u, i + 1) for i, u in enumerate(urls)]
         for coro in asyncio.as_completed(tasks):
