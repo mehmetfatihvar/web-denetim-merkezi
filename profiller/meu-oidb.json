@@ -30,6 +30,13 @@
   "temsilci_sayisi": 3,
   "rota_limit": 0,
   "tiklama_limit": 40,
+  "etiket_ornek": 30,
+  "etiket_csv": "",
+  "css_oneri": "",
+  "oto_limit": 200,
+  "oto_cihaz": "mobile",
+  "oto_tur": 4,
+  "oto_goruntu": 12,
   "bologna_url": "https://obs.mersin.edu.tr/oibs/bologna/",
   "bologna_program": "1371",
   "bologna_seviye": "lisans"

@@ -1,0 +1,17 @@
+name: olcum
+on:
+  push:
+    branches: [olcum-arayuz]
+jobs:
+  olc:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install sv-ttk
+      - run: python olcum/olc.py modern 1
+      - run: python olcum/olc.py modern 0
+      - run: python olcum/olc.py hizli 1
+      - run: python olcum/olc.py hizli 0
