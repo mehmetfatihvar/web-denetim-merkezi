@@ -162,7 +162,18 @@ async def main():
         broken, ref = load_broken_csv(opts.kirik_linkler)
         print(f"[*] Kaynak: {opts.kirik_linkler} ({len(broken)} site içi kırık hedef)")
     else:
-        broken, ref = load_from_map(opts.map)
+        # Program eski sürümdeyse --map (adres listesi) gelir; kırık link denetimi çıktısı
+        # çıktı klasörünün yanında varsa (ciktilar/<profil>/linkdenetim/) o kullanılır.
+        yan = os.path.join(os.path.dirname(os.path.abspath(opts.out)), "linkdenetim", "broken_links.csv")
+        try:
+            harita_ayrintili = "pages" in load_map(opts.map)
+        except Exception:
+            harita_ayrintili = False
+        if not harita_ayrintili and os.path.exists(yan):
+            broken, ref = load_broken_csv(yan)
+            print(f"[*] Kaynak: {yan} ({len(broken)} site içi kırık hedef)")
+        else:
+            broken, ref = load_from_map(opts.map)
 
     targets = [u for u in broken if ref[u]]
     if opts.only:
