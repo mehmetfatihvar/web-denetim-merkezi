@@ -680,6 +680,7 @@ def calistir(a, ornekler, cikti, istemciler, filtre=None):
     paralel ={ist.ad: (1 if ist.ad.startswith("ollama:") else a.paralel) for ist in istemciler}
     havuzlar = {ad: ThreadPoolExecutor(max_workers=n) for ad, n in paralel.items()}
     baslangic = time.time()
+    yapilamayan = Counter()
     with open(onbellek_yol, "a", encoding="utf-8") as f:
         gelecekler = {havuzlar[is_["istemci"].ad].submit(tek_istek, is_["istemci"], is_): is_
                       for is_ in isler}
@@ -694,6 +695,8 @@ def calistir(a, ornekler, cikti, istemciler, filtre=None):
             with kilit:
                 f.write(json.dumps(kayit, ensure_ascii=False) + "\n")
                 f.flush()
+            if hata:
+                yapilamayan[hata_turu(hata)] += 1
             if hata and hata != "kota_bitti":
                 print(f"  ❌ {kayit['model']} {o['dosya'][:60]} #{d['no']}: {kisa_hata(hata)}")
             if i % 20 == 0 or i == len(isler) or len(isler) <= 20:
@@ -702,6 +705,38 @@ def calistir(a, ornekler, cikti, istemciler, filtre=None):
                       flush=True)
     for h in havuzlar.values():
         h.shutdown()
+    yapilamayan_ozeti(yapilamayan, len(isler), hakem=filtre is not None)
+
+
+def hata_turu(hata):
+    if "gemma_500_kalici" in hata:
+        return "Gemma kalıcı 500 (PNG ve JPEG denendi)"
+    if hata == "kota_bitti" or "429" in hata or "RESOURCE_EXHAUSTED" in hata:
+        return "kota / hız sınırı"
+    if "json" in hata or hata == "bos_cevap":
+        return "geçersiz ya da boş cevap"
+    return "bağlantı / sunucu hatası"
+
+
+def yapilamayan_ozeti(sayac, toplam, hakem=False):
+    """Çalışma sonunda kaç isteğin yapılamadığını ve ne yapılacağını açıkça yazar."""
+    n = sum(sayac.values())
+    if not n:
+        print(f"\n✅ {toplam} isteğin hepsi tamamlandı.")
+        return
+    ayrinti = ", ".join(f"{a}: {s}" for a, s in sayac.most_common())
+    if hakem:
+        print(f"\n⚠ Hakem: {toplam} istekten {n} tanesi yapılamadı ({ayrinti}).\n"
+              "   NE YAPMALI: Aynı adımı (3c. Hakem modeli) tekrar çalıştırın; yalnız yapılamayanlar\n"
+              "   yeniden denenir. Ardından 4, 5 ve 6. adımları yeniden çalıştırın.", flush=True)
+        return
+    print(f"\n⚠ {toplam} istekten {n} tanesi yapılamadı ({ayrinti}).\n"
+          "   NE YAPMALI: Aynı adımı (3b. Yapay zekâ analizi) tekrar çalıştırın; yalnız yapılamayanlar\n"
+          "   yeniden denenir, tamamlananlar atlanır. Kota hatasıysa sınır sıfırlanınca (çoğu zaman\n"
+          "   ertesi gün) çalıştırın. Ardından 3c. Hakem modeli ve sonraki adımları (4, 5, 6) da\n"
+          "   yeniden çalıştırın ki sonuçlar güncellensin.\n"
+          "   Gemma bazı görüntülerde 500'ü kalıcı verir; tekrar denemede yine düşenlere hakem\n"
+          "   model bakar (3c), yani bu dilimler denetimsiz kalmaz.", flush=True)
 
 
 # ------------------------------------------------------------------ TOPLU İSTEK (BATCH)

@@ -368,6 +368,7 @@ madde([
   "**Durdur** ile ya da program kapanınca yarıda kalan adımı **yeniden çalıştırmanız yeterlidir**: test, keşif, yapay zekâ analizi ve Bologna kaldığı yerden devam eder. Yapılmış sayfalar atlanır.",
   "Tüm site testinde **Tam testi sıfırdan başlat** (Ayarlar) açıksa önceki sonuçlar silinip baştan başlanır; normalde kapalı tutun.",
   "Ücretsiz Gemini kotası günlük dolarsa yapay zekâ analizi durur; ertesi gün aynı adımı çalıştırın.",
+  "**Hata alan istekler de yeniden denenir.** Yapay zekâ analizi yalnız başarılı cevapları \"yapıldı\" sayar; sunucu hatası (ör. Gemma 500), kota ya da bağlantı hatası alan istekler aynı adım tekrar çalıştırıldığında yeniden gönderilir. Analiz bitince kayıtta (ve **Hatalar ve uyarılar** sekmesinde) \"⚠ N istekten M tanesi yapılamadı\" uyarısı ve ne yapılacağı yazar.",
 ]);
 
 H2("5.4 Örnek senaryolar");
@@ -535,6 +536,7 @@ H2("8.4 Kota, hız ve maliyet");
 madde([
   "**Dakikada istek sınırı** (varsayılan 8): ücretsiz Gemini katmanının dakikalık sınırına takılmamak için. Ücretli hesapta 0 (sınırsız) yapılabilir.",
   "Günlük kota dolarsa analiz o model için durur; ertesi gün aynı adım kaldığı yerden devam eder.",
+  "**Gemma \"gemma_500_kalici\" hatası:** Gemma bazı görüntülerde sunucu hatası (500) verir. Araç görüntüyü önce PNG, sonra JPEG olarak dener; ikisi de düşerse dilimi \"bakılamadı\" işaretleyip geçer ve **3c. Hakem modeli** bu dilimlere bakar. Daha çok dilimin ana modelden geçmesi için analiz bitince **3b**'yi bir kez daha çalıştırın (yalnız yapılamayanlar denenir); ardından **3c, 4, 5 ve 6**'yı yeniden çalıştırın.",
   "**3a. Maliyet/süre tahmini** API çağırmadan istek sayısını ve Claude için tahmini maliyeti gösterir. Önce **Sayfa sınırı (deneme)** ile küçük bir tur yapmanız önerilir.",
   "Claude kullanıyorsanız **Claude toplu istek (Batch)** maliyeti yarıya indirir; sonuç genelde bir saat içinde gelir.",
 ]);
@@ -619,6 +621,7 @@ tablo(["Belirti", "Olası neden", "Çözüm"], [
   ["Keşif çok az sayfa buldu", "Linkler JavaScript ile üretiliyor (SPA).", "**Tarayıcıyla keşfet**'i açın."],
   ["Yapay zekâ: \"model bu hesapta kullanılamıyor (404)\"", "Model adı yanlış ya da hesapta yok.", "**Yapay zekâ sağlayıcılarını dene** ile kullanılabilir modelleri görün, ayarı düzeltin."],
   ["Yapay zekâ: \"günlük kota doldu\"", "Ücretsiz katman kotası.", "Ertesi gün aynı adımı çalıştırın; kaldığı yerden devam eder."],
+  ["Yapay zekâ: çok sayıda \"gemma_500_kalici\" ya da sonda \"N istek yapılamadı\"", "Gemma sunucu hatası, kota ya da bağlantı sorunu.", "Adım bitince **3b**'yi tekrar çalıştırın: yalnız yapılamayanlar denenir. Sonra **3c, 4, 5, 6**'yı yeniden çalıştırın. Yine düşen Gemma dilimlerine hakem bakar."],
   ["Yapay zekâ adımı \"ornekler.csv yok\" diyor", "Önceki adımlar çalışmamış.", "Yapay zekâ hattını baştan (1. adımdan) çalıştırın."],
   ["Canlı doğrulama \"results.jsonl yok\" diyor", "Doğrulama çekimi yapılmamış ya da yarıda kalmış.", "7. adımı yeniden çalıştırın."],
   ["\"Etiketleri işle\" CSV'yi okuyamıyor", "Dosya başka yerde ya da sayfadan indirilmemiş.", "Etiketleme sayfasındaki **CSV indir**'i kullanın; dosya İndirilenler'de değilse Ayarlar'da yolunu verin."],
@@ -633,6 +636,7 @@ const sss = [
   ["Program siteyi değiştirir mi?", "Hayır. Sayfalar yalnızca okunur. CSS denemeleri yalnızca programın açtığı tarayıcı sekmesine eklenir; site dosyalarına dokunulmaz."],
   ["Sunucuyu zorlar mı?", "Eşzamanlı sekme sayısı ve saniyede istek ayarlarıyla sınırlanır. Ön-prodüksiyon sunucularında 4 eşzamanlı sekme önerilir; 10 gibi yüksek değerler zaman aşımlarına yol açabilir."],
   ["Yarıda kalan işi baştan mı çalıştırmam gerekir?", "Hayır. Aynı adımı yeniden çalıştırın; test, keşif, yapay zekâ analizi ve Bologna kaldığı yerden devam eder."],
+  ["Yapay zekâ analizinde hata alan istekler ne olur? Adımı tekrar çalıştırırsam hepsini baştan mı yapar?", "Hayır, yalnız yapılamayanları (sunucu hatası, kota, bağlantı) yeniden dener; başarılı olanlar atlanır. Analizi yeniden çalıştırdıysanız hakem (3c) ve sonraki adımları da yeniden çalıştırın ki son rapor güncellensin."],
   ["Yapay zekâ olmadan kullanılabilir mi?", "Evet. Test, belge, link, görsel denetim, doğrulama, canlı doğrulama, otomatik taşma düzeltme ve teslim yapay zekâ gerektirmez."],
   ["Bulgulara ne kadar güvenebilirim?", "Kodla ölçülen bulgular (HTTP durumu, taşma, kırık link) kesindir. Yapay zekâ bulguları iki modelle ve canlı doğrulamayla süzülür; yine de elle etiketlemeyle bir örneklem kontrol edilmelidir. İsabet tabloları (7.5, 7.7) bunun ölçüsünü verir."],
   ["Bir sonucu bir başkasına nasıl iletirim?", "**Teslim > Teslim paketini oluştur** ve `TESLIM/` klasörünü paylaşın; `index.html` her dosyanın ne olduğunu açıklar."],

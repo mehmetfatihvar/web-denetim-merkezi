@@ -156,6 +156,15 @@ class AdimTestleri(GeciciKlasor):
         self.assertIn("broken_links.csv", k)
         self.assertLess(TAM_HAT_SIRA("link"), TAM_HAT_SIRA("tiklama"))
 
+    def test_hakem_bakilamayan_dilimleri_atlamaz(self):
+        """Tür örneklemesinde ana modelin bakamadığı dilimler (Gemma kalıcı 500) ayrı turda
+        hakeme gider."""
+        ayar = dict(A.VARSAYILAN, cikti_koku=str(self.t), ai_hakem_ornek=3, ai_hakem_grup="tur")
+        komutlar = [k.goster() for k in ADIM["ai_hakem"].komutlar(ayar)]
+        self.assertEqual(len(komutlar), 2)
+        self.assertIn("--sadece-bakilamayan", komutlar[1])
+        self.assertEqual(len(ADIM["ai_hakem"].komutlar(dict(ayar, ai_hakem_ornek=0))), 1)
+
     def test_bologna_adresi_ve_modu(self):
         a = self.ayar(bologna_url="https://obs.baska.edu.tr/oibs/bologna/", bologna_mod="yerel")
         komutlar = ADIM["bologna_program"].komutlar(a)

@@ -246,6 +246,22 @@ def _denetim_raporu(tur, ayar):
                  aciklama="Okunabilir rapor (HTML + Excel CSV)")
 
 
+def _hakem(ayar):
+    """Hakem turu. Hata türü örneklemesinde ("tur") ana modelin hiç bakamadığı dilimler
+    (ör. Gemma kalıcı 500) örnekleme dışında kalır; onlar ikinci bir turda hakeme gider ki hiçbir
+    dilim denetimsiz kalmasın."""
+    toplu = ["--toplu"] if ayar["ai_toplu"] else []
+    if not ayar["ai_hakem_ornek"]:
+        return [_analiz(ayar, "--hakem", ayar["ai_hakem"], *toplu)]
+    komutlar = [_analiz(ayar, "--hakem", ayar["ai_hakem"], "--hakem-ornek", ayar["ai_hakem_ornek"],
+                        "--hakem-grup", ayar["ai_hakem_grup"], *toplu)]
+    if ayar["ai_hakem_grup"] == "tur":
+        k = _analiz(ayar, "--hakem", ayar["ai_hakem"], "--sadece-bakilamayan", *toplu)
+        k.aciklama = "Hakem: ana modelin bakamadığı dilimler"
+        komutlar.append(k)
+    return komutlar
+
+
 def _ortam(ayar):
     from .ortam import rapor
     return [Komut(fonksiyon=lambda yaz: rapor(ayar, yaz), aciklama="Ortam kontrolü")]
@@ -446,16 +462,16 @@ def _adimlar() -> List[Adim]:
              lambda a: [_analiz(a, "--modeller", a["ai_modeller"], "--tahmin")], sure="saniyeler"),
         Adim("ai_analiz", "ai", "3b. Yapay zekâ analizi",
              "Görüntüleri dilimleyip seçili modellere aynı talimat ve JSON şemasıyla sorar. "
-             "Yarıda kalırsa tekrar çalıştırın, kaldığı yerden devam eder.",
+             "Yarıda kalırsa ya da sonunda 'N istek yapılamadı' uyarısı çıkarsa (Gemma 500, kota) "
+             "tekrar çalıştırın: yalnız yapılamayanlar denenir. Sonra 3c ve sonrasını da çalıştırın.",
              lambda a: [_analiz(a, "--modeller", a["ai_modeller"])],
              lambda a: [K(a).ai_sonuc / "bulgular.csv", K(a).ai_sonuc / "oylama.csv",
                         K(a).ai_sonuc / "ozet.txt"]),
         Adim("ai_hakem", "ai", "3c. Hakem modeli",
-             "Modellerin anlaşamadığı veya yüksek önem verdiği dilimleri hakem modele sorar.",
-             lambda a: [_analiz(a, "--hakem", a["ai_hakem"],
-                                *(["--hakem-ornek", a["ai_hakem_ornek"], "--hakem-grup",
-                                   a["ai_hakem_grup"]] if a["ai_hakem_ornek"] else []),
-                                *(["--toplu"] if a["ai_toplu"] else []))],
+             "Modellerin anlaşamadığı veya yüksek önem verdiği dilimleri ve ana modelin hiç "
+             "bakamadığı dilimleri (ör. Gemma kalıcı 500) hakem modele sorar. 3b yeniden "
+             "çalıştırıldıysa bu adımı ve sonrasını da yeniden çalıştırın.",
+             _hakem,
              lambda a: [K(a).ai_sonuc / "oylama.csv"]),
         Adim("ai_isabet", "ai", "4. İsabet ölçümü",
              "Hata türü başına hakem onay oranı ve taşmada piksel ölçümüyle precision/recall.",
