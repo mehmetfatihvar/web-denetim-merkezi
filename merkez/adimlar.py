@@ -407,9 +407,10 @@ def _adimlar() -> List[Adim]:
                             *(["--limit", a["rota_limit"]] if a["rota_limit"] else []))],
              lambda a: [K(a).rota_csv]),
         Adim("tiklama", "dogrulama", "Buton tıklama doğrulama",
-             "Sitedeki butonlara gerçekten tıklar: kırık sayfaya mı götürüyor?",
-             lambda a: [_py(a, "verify_clicks.py", "--map", yol(a["harita"]), "--limit",
-                            a["tiklama_limit"], "--out", K(a).tiklama_csv)],
+             "Kırık link denetiminin bulduğu site içi kırık adreslere link veren sayfaları açar ve "
+             "butona gerçekten tıklar: kırık sayfaya mı götürüyor? Önce 'Kırık link denetimi' gerekir.",
+             lambda a: [_py(a, "verify_clicks.py", "--kirik-linkler", K(a).link / "broken_links.csv",
+                            "--limit", a["tiklama_limit"], "--out", K(a).tiklama_csv)],
              lambda a: [K(a).tiklama_csv]),
 
         # ---- Yapay zekâ görsel denetimi

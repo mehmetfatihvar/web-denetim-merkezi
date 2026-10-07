@@ -20,7 +20,8 @@ sys.path.insert(0, str(PROGRAM / "tools"))
 
 from merkez import ayarlar as A  # noqa: E402
 from merkez import yollar  # noqa: E402
-from merkez.adimlar import ADIM, ADIMLAR, GRUPLAR, harita_url_sayisi, tam_hat  # noqa: E402
+from merkez.adimlar import ADIM, ADIMLAR, GRUPLAR, TAM_HAT, harita_url_sayisi, tam_hat  # noqa: E402
+TAM_HAT_SIRA = TAM_HAT.index
 from merkez.calistirici import Calistirici  # noqa: E402
 from merkez.adimlar import Adim, Komut  # noqa: E402
 
@@ -145,6 +146,15 @@ class AdimTestleri(GeciciKlasor):
                               ("--site-tanimi", "an online shop"), ("--site-dili", "German")):
             self.assertEqual(k.argv[k.argv.index(bayrak) + 1], deger)
         self.assertEqual(k.env["OPENAI_API_KEY"], "k")
+
+    def test_tiklama_kirik_link_ciktisini_kullanir(self):
+        """Tıklama doğrulama site haritasındaki sayfa ayrıntılarına değil, kırık link denetiminin
+        çıktısına dayanır (keşif haritalarında ve ÖİDB haritasında sayfa linkleri yok)."""
+        ayar = dict(A.VARSAYILAN, cikti_koku=str(self.t))
+        k = ADIM["tiklama"].komutlar(ayar)[0].goster()
+        self.assertIn("--kirik-linkler", k)
+        self.assertIn("broken_links.csv", k)
+        self.assertLess(TAM_HAT_SIRA("link"), TAM_HAT_SIRA("tiklama"))
 
     def test_bologna_adresi_ve_modu(self):
         a = self.ayar(bologna_url="https://obs.baska.edu.tr/oibs/bologna/", bologna_mod="yerel")

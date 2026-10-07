@@ -53,6 +53,43 @@ def load_map(path):
     sys.exit(1)
 
 
+def load_broken_csv(path, statuses=(401, 403, 404)):
+    """Kırık link denetiminin çıktısından (broken_links.csv: url, status, kaynak_sayfa, ...)
+    site içi kırık hedefler ve onlara link veren sayfalar. Her siteye uyar; site haritasında
+    sayfa durumları ve linkler gerekmez."""
+    broken, ref = {}, collections.defaultdict(list)
+    with open(path, encoding="utf-8-sig", newline="") as f:
+        for r in csv.DictReader(f):
+            u, st, kaynak = r.get("url", ""), (r.get("status") or "").strip(), r.get("kaynak_sayfa", "")
+            if not (st.isdigit() and int(st) in statuses) or not kaynak:
+                continue
+            if urlparse(u).hostname != urlparse(kaynak).hostname:     # yalnız site içi linkler
+                continue
+            broken[u] = int(st)
+            if kaynak not in ref[u]:
+                ref[u].append(kaynak)
+    return broken, ref
+
+
+def load_from_map(path):
+    """Eski biçim: sayfa durumları ve linkleri olan site haritası ({"pages": {url: {status, links}}})."""
+    data = load_map(path)
+    if "pages" not in data:
+        print("[HATA] Bu site haritasında sayfa durumları/linkleri yok. Önce 'Kırık link denetimi' "
+              "adımını çalıştırıp --kirik-linkler ile broken_links.csv verin.")
+        sys.exit(1)
+    pages = data["pages"]
+    broken = {u: i.get("status") for u, i in pages.items() if i.get("status") in (401, 403, 404)}
+    # tersine indeks: kırık URL -> onu linkleyen 200'lük sayfalar
+    ref = collections.defaultdict(list)
+    for u, info in pages.items():
+        if info.get("status") == 200:
+            for l in info.get("links", []):
+                if l in broken:
+                    ref[l].append(u)
+    return broken, ref
+
+
 async def check_click(context, target, referrer, timeout):
     rec = {"kirik_url": target, "referrer": referrer, "referrer_status": None,
            "buton_var": False, "gidilen_url": "", "verdict": "BELİRSİZ"}
@@ -106,7 +143,10 @@ async def check_click(context, target, referrer, timeout):
 
 async def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--map", default="../data/final_complete_site_map.json")
+    ap.add_argument("--kirik-linkler", default=None,
+                    help="Kırık link denetiminin broken_links.csv'si (önerilen; her sitede çalışır)")
+    ap.add_argument("--map", default="../data/final_complete_site_map.json",
+                    help="Eski biçim site haritası (sayfa durumları ve linkleriyle)")
     ap.add_argument("--limit", type=int, default=40)
     ap.add_argument("--only", default=None, help="Sadece bu metni içeren kırık URL'ler (ör: programs)")
     ap.add_argument("--concurrency", type=int, default=3)
@@ -114,16 +154,15 @@ async def main():
     ap.add_argument("--out", default="clicks_verification.csv")
     opts = ap.parse_args()
 
-    data = load_map(opts.map)
-    pages = data["pages"]
-    broken = {u: i.get("status") for u, i in pages.items() if i.get("status") in (401, 403, 404)}
-    # tersine indeks: kırık URL -> onu linkleyen 200'lük sayfalar
-    ref = collections.defaultdict(list)
-    for u, info in pages.items():
-        if info.get("status") == 200:
-            for l in info.get("links", []):
-                if l in broken:
-                    ref[l].append(u)
+    if opts.kirik_linkler:
+        if not os.path.exists(opts.kirik_linkler):
+            print(f"[HATA] {opts.kirik_linkler} yok. Önce 'Kırık link denetimi' adımını çalıştırın; "
+                  "bu adım kırık adresleri ve onlara link veren sayfaları bulur.")
+            sys.exit(1)
+        broken, ref = load_broken_csv(opts.kirik_linkler)
+        print(f"[*] Kaynak: {opts.kirik_linkler} ({len(broken)} site içi kırık hedef)")
+    else:
+        broken, ref = load_from_map(opts.map)
 
     targets = [u for u in broken if ref[u]]
     if opts.only:
