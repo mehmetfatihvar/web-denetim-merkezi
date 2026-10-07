@@ -76,6 +76,7 @@ DILIM = {                     # cihaz -> (hedef genişlik, dilim yüksekliği)
 VARSAYILAN_DILIM = (1024, 1024)
 
 CLAUDE_MODEL = "claude-opus-5"
+ZAMAN_ASIMI = 300       # sn; cevapsız kalan bağlantı asılı kalmasın, hata sayılıp yeniden denensin
 DENEME = 6               # geçici hatalarda (503 yoğunluk, 429 dakikalık sınır) toplam deneme
 GEMINI_MODEL = "gemini-3.6-flash"   # --gemini-dene ile ücretsiz sürümde çalıştığı doğrulandı
 
@@ -303,7 +304,11 @@ class Gemini:
         from google import genai
         from google.genai import types
         self.types = types
-        self.client = genai.Client()   # GEMINI_API_KEY / GOOGLE_API_KEY
+        try:   # GEMINI_API_KEY / GOOGLE_API_KEY; zaman aşımı milisaniye
+            self.client = genai.Client(
+                http_options=types.HttpOptions(timeout=ZAMAN_ASIMI * 1000))
+        except Exception:   # zaman aşımını desteklemeyen eski kütüphane sürümü
+            self.client = genai.Client()
         self.ad, self.model = f"gemini:{model}", model
         # Gemma modelleri Gemini API'de sistem talimatı ve JSON şemasını desteklemeyebilir:
         # talimat + şema mesajın içine konur, JSON cevaptan ayıklanır.
@@ -372,7 +377,8 @@ class Gemini:
                       "yarın aynı komutla kaldığı yerden devam edin.\n", flush=True)
             self.kapali = True
             return False
-        return any(k in metin for k in ("429", "RESOURCE_EXHAUSTED", "503", "UNAVAILABLE", "500"))
+        return (any(k in metin for k in ("429", "RESOURCE_EXHAUSTED", "503", "UNAVAILABLE", "500"))
+                or zaman_asimi_mi(e))
 
 
 class Ollama:
@@ -557,6 +563,11 @@ def kisa_hata(hata):
     return hata[:150] + ek
 
 
+def zaman_asimi_mi(e):
+    metin = f"{type(e).__name__} {e}".lower()
+    return "timeout" in metin or "timed out" in metin
+
+
 def tek_istek(istemci, is_):
     for deneme in range(DENEME):
         if getattr(istemci, "kapali", False):
@@ -681,6 +692,7 @@ def calistir(a, ornekler, cikti, istemciler, filtre=None):
     havuzlar = {ad: ThreadPoolExecutor(max_workers=n) for ad, n in paralel.items()}
     baslangic = time.time()
     yapilamayan = Counter()
+    basarili = 0
     with open(onbellek_yol, "a", encoding="utf-8") as f:
         gelecekler = {havuzlar[is_["istemci"].ad].submit(tek_istek, is_["istemci"], is_): is_
                       for is_ in isler}
@@ -697,11 +709,14 @@ def calistir(a, ornekler, cikti, istemciler, filtre=None):
                 f.flush()
             if hata:
                 yapilamayan[hata_turu(hata)] += 1
+            else:
+                basarili += 1
             if hata and hata != "kota_bitti":
                 print(f"  ❌ {kayit['model']} {o['dosya'][:60]} #{d['no']}: {kisa_hata(hata)}")
             if i % 20 == 0 or i == len(isler) or len(isler) <= 20:
                 gecen = time.time() - baslangic
-                print(f"  [{i}/{len(isler)}] ~{gecen / i * (len(isler) - i) / 60:.0f} dk kaldı",
+                print(f"  [{i}/{len(isler)}] ✓ {basarili} başarılı  ✗ {i - basarili} yapılamadı  "
+                      f"~{gecen / i * (len(isler) - i) / 60:.0f} dk kaldı",
                       flush=True)
     for h in havuzlar.values():
         h.shutdown()
@@ -715,6 +730,8 @@ def hata_turu(hata):
         return "kota / hız sınırı"
     if "json" in hata or hata == "bos_cevap":
         return "geçersiz ya da boş cevap"
+    if "timeout" in hata.lower() or "timed out" in hata.lower():
+        return "zaman aşımı (cevap gelmedi)"
     return "bağlantı / sunucu hatası"
 
 

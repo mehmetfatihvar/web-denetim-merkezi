@@ -275,6 +275,44 @@ class AnalizTestleri(unittest.TestCase):
         self.assertIn("instead of Turkish letters", talimat)
         self.assertIn("- Turkish text is expected and correct.", talimat)
 
+    def test_ilerleme_basarili_sayisi_ve_zaman_asimi(self):
+        """İlerleme satırı başarılı/yapılamayan sayısını gösterir; asılı bağlantı hata sayılır."""
+        try:
+            import PIL  # noqa: F401
+        except ImportError:
+            self.skipTest("pillow yok")
+        import contextlib, io, sys, tempfile, types
+        sys.path.insert(0, str(yollar.GORSEL_DENETIM))
+        import analiz
+        from PIL import Image
+        d = Path(tempfile.mkdtemp())
+        ornekler = []
+        for k in range(20):
+            p = d / f"s{k}.png"
+            Image.new("RGB", (400, 300), "white").save(p)
+            ornekler.append({"dosya": p.name, "tam_yol": p, "cihaz": "desktop", "sayfa": "u",
+                             "sablon": "x"})
+
+        class Sahte:
+            ad, kapali, n = "gemini:sahte", False, 0
+
+            def sor(self, png, baglam):
+                Sahte.n += 1
+                if Sahte.n % 4 == 0:
+                    raise TimeoutError("The read operation timed out")
+                return {"sorunlar": []}, {"girdi": 1, "cikti": 1}, ""
+
+            def hata_tekrar_denenir_mi(self, e):
+                return False
+
+        cikti = io.StringIO()
+        with contextlib.redirect_stdout(cikti):
+            analiz.calistir(types.SimpleNamespace(dilim=3, toplu=False, paralel=1),
+                            ornekler, d, [Sahte()])
+        self.assertIn("[20/20] ✓ 15 başarılı  ✗ 5 yapılamadı", cikti.getvalue())
+        self.assertIn("zaman aşımı", cikti.getvalue())
+        self.assertTrue(analiz.zaman_asimi_mi(TimeoutError("x")))
+
 
 if __name__ == "__main__":
     unittest.main()
