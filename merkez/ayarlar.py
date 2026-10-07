@@ -273,6 +273,7 @@ class Klasorler:
         self.tiklama_csv = self.kok / "clicks_verification.csv"
         self.teslim = self.kok / "TESLIM"
         self.kayitlar = self.kok / "merkez_kayitlari"
+        self.adim_raporlari = self.kok / "adim_raporlari"     # her adım çalışmasının raporu
         self.temsilciler = self.veri / "template_representatives.json"
         # Görsel doğrulama ve düzeltme
         self.dogrulama = self.kok / "dogrulama"

@@ -12,4 +12,8 @@ with sync_playwright() as p:
                      (kok / "denetim" / "belge_raporu.html", "20_belge_raporu")):
         s.goto(html.resolve().as_uri()); s.wait_for_timeout(400)
         s.screenshot(path=str(img / f"{ad}.png"))
+    adim = sorted((kok / "adim_raporlari").glob("*_rota.html"))
+    if adim:
+        s.goto(adim[-1].resolve().as_uri()); s.wait_for_timeout(400)
+        s.screenshot(path=str(img / "21_adim_raporu.png"))
     t.close()

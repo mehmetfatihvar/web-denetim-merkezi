@@ -623,3 +623,30 @@ class DenetimRaporuTestleri(GeciciKlasor):
         # durum özeti sorunlu belgeyi ayrı sayar
         from merkez.durum import kutucuklar
         self.assertIn(("Sorunlu belge", "2", "3 belgeden", "hata"), kutucuklar(ayar))
+
+
+class AdimRaporuTestleri(GeciciKlasor):
+    """Her adım, ne üretirse üretsin, bir adım raporu bırakır."""
+
+    def test_her_adim_rapor_birakir(self):
+        from merkez.adim_raporu import son_rapor
+        ayar = dict(A.VARSAYILAN, cikti_koku=str(self.t / "c"))
+        csv_yolu = self.t / "c" / "sonuc.csv"
+        kod = (f"import pathlib; p=pathlib.Path(r'{csv_yolu}'); p.parent.mkdir(parents=True, exist_ok=True); "
+               "p.write_text('url;karar\\nhttps://a;KIRIK\\n', encoding='utf-8-sig'); print('[HATA] örnek')")
+        dosyali = Adim("dosyali", "web", "Dosyalı adım", "açıklama",
+                       lambda a: [Komut([sys.executable, "-c", kod])], lambda a: [csv_yolu])
+        dosyasiz = Adim("dosyasiz", "web", "Dosyasız adım", "",
+                        lambda a: [Komut([sys.executable, "-c", "print('merhaba')"])])
+        c = Calistirici(lambda m: None, lambda o: None)
+        c.calistir([dosyali, dosyasiz], dict(ayar, hata_olursa_devam=True))
+        klasor = A.Klasorler(ayar).adim_raporlari
+        self.assertTrue(all(r["rapor"] for r in c.sonuclar))
+        r1 = son_rapor(klasor, "dosyali").read_text(encoding="utf-8")
+        self.assertIn("<td>KIRIK</td>", r1)                 # CSV önizlemesi
+        self.assertIn("[HATA] örnek", r1)                    # hata listesi
+        r2 = son_rapor(klasor, "dosyasiz").read_text(encoding="utf-8")
+        self.assertIn("merhaba", r2)                         # dosya yoksa çalışma kaydı
+        dizin = (klasor / "index.html").read_text(encoding="utf-8")
+        self.assertIn("Dosyalı adım", dizin)
+        self.assertIn("Dosyasız adım", dizin)

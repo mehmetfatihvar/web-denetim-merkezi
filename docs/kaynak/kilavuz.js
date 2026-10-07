@@ -281,7 +281,7 @@ madde([
   "**Liste sütunları:** seçim kutusu, adım adı, tahmini süre, durum. Durum; son çıktının zamanını, çalışırken canlı yüzdeyi (● %45), bitince sonucu (✓ Başarılı / ✗ Başarısız) gösterir.",
   "**Seçmek:** satırın başındaki kutuya tıklayın ya da satırdayken **boşluk** tuşuna basın. Birden fazla sayfadan adım seçilebilir; seçim sayfalar arasında korunur.",
   "**Çalıştırmak:** tek bir adımı satıra çift tıklayarak ya da kartın **► Çalıştır** düğmesiyle; seçilenleri üst çubuktan.",
-  "**Ayrıntı kartı:** adımın açıklaması, ürettiği dosyalar (✓ var / ○ yok), **Çıktıyı aç**, **Klasörü aç** ve **Çalışacak komutu kayda yaz** (adımı çalıştırmadan hangi komutun çalışacağını gösterir).",
+  "**Ayrıntı kartı:** adımın açıklaması, ürettiği dosyalar (✓ var / ○ yok), **Çıktıyı aç**, **Klasörü aç**, **Son adım raporunu aç** (bu adımın son çalışmasının raporu; bkz. 7.10) ve **Çalışacak komutu kayda yaz** (adımı çalıştırmadan hangi komutun çalışacağını gösterir).",
 ]);
 gorsel("04_secim.png", "Birden fazla adım seçildiğinde üstteki düğme seçim sayısını gösterir");
 
@@ -302,6 +302,7 @@ gorsel("07_hatalar.png", "Hatalar ve uyarılar sekmesi");
 H3("Son çalışma");
 P("Bir çalışma bitince kendiliğinden açılır: her adımın durumu, süresi, hata/uyarı sayısı, **ürettiği çıktı ve raporlar** ve kayıt dosyası. Bir satıra çift tıklamak dosyayı açar; **Bulunduğu klasör** klasörü açar; **Teslim paketi oluştur** paketi hazırlar.");
 gorsel("06_son_calisma.png", "Son çalışma sekmesi: adımlar, süreler ve üretilen dosyalar");
+P("Her adımın altındaki ilk satır **Adım raporu**dur: o adımın bu çalışmadaki sonucunu tek sayfada gösterir (bkz. 7.10).");
 
 H2("3.7 Tema ve kısayollar");
 P("Sol alttaki düğme açık ve karanlık tema arasında geçiş yapar. Varsayılan **sade görünüm** hızlı çizilir. İsteyen **Ayarlar → Genel → Arayüz görünümü** ile Windows 11 tarzı **modern** görünümü (`sv-ttk`) seçebilir; ancak bu tema her öğeyi resimle çizdiği için Windows'ta sayfa geçişleri ve tema değişimi belirgin yavaşlar (ölçümde 5–7 kat). Değişiklik program yeniden açılınca geçerli olur.");
@@ -494,6 +495,15 @@ dikkat("Ölçüm yalnızca yana kaymayı görür. `oneri.css` geliştiriciye ver
 H2("7.9 Raporlar ve özet sayfası");
 P("Menüdeki **Raporlar ve özet** sayfası bütün çıktılardan çıkarılan sayıları tek tabloda gösterir (F5 ile yenilenir) ve raporları açan düğmeleri içerir.");
 gorsel("11_raporlar.png", "Raporlar ve özet sayfası");
+H2("7.10 Adım raporları: her adımın her çalışması");
+P("Program, hangi adım olursa olsun, adım bittiği anda o adım için bir **adım raporu** yazar; kendi raporu olmayan ara adımlar (doğrulama, kümeleme, piksel tarama, yapay zekâ analizi ve hakem, isabet, metin denetimi, canlı doğrulama, CSS denemesi, Bologna, kurulum ve ortam kontrolü) dahil hiçbir adımın sonucu yalnızca bir CSV'de ya da kayıtta kalmaz. Raporda:");
+madde([
+  "sonuç (başarılı / başarısız / durduruldu), süre, hata ve uyarı sayıları;",
+  "adımın ürettiği **her dosya**: kendi HTML raporu varsa bağlantısı, CSV'ler aranabilir tablo olarak (ilk 500 satır), TXT'ler metin olarak, JSON'lar özet olarak (alanlar ve öğe sayıları);",
+  "hatalar ve uyarılar listesi, çalıştırılan komutlar ve çalışma kaydının son 400 satırı (tamamına bağlantı).",
+]);
+gorsel("21_adim_raporu.png", "Adım raporu örneği: Kırık sayfa doğrulama — sonuç, CSV çıktısı tablo olarak, hatalar ve komutlar");
+P("Raporlar `<çıktı klasörü>/adim_raporlari/` altında tarihli adlarla birikir; **Raporlar ve özet → Adım raporları (her çalışma)** hepsini en yeniden eskiye listeleyen dizini açar. Bir adımın en son raporu, adım sayfasındaki ayrıntı kartında **Son adım raporunu aç** ile de açılır. Kırık link raporu ayrıca doğrulama adımlarının teyitlerini (doğrudan erişim, buton tıklama) her kırık bağlantının yanında gösterir.");
 H2("7.10 Teslim paketi");
 P("`TESLIM/` klasöründe `raporlar/` (HTML raporlar, CSS önerisi, son görsel denetim raporu, önce/sonra görüntüleri) ve `veri/` (bütün CSV/XLSX/JSON çıktılar) bulunur; `index.html` bunların açıklamalı listesidir. Ekran görüntüleri büyük olduğu için pakete kopyalanmaz; gerekirse `test_output/screenshots/` ayrıca ZIP'lenir.");
 

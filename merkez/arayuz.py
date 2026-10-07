@@ -14,7 +14,7 @@ import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
 from pathlib import Path
 
-from . import SURUM, denetim_raporu, tema, yollar
+from . import SURUM, adim_raporu, denetim_raporu, tema, yollar
 from . import ayarlar as A
 from .adimlar import ADIM, ADIMLAR, AI_HATTI, GRUPLAR, grup_adimlari, tam_hat
 from .calistirici import Calistirici
@@ -552,6 +552,7 @@ class Uygulama:
             ("Doğrulama özeti", lambda: k().dogrulama_cikti / "ozet.txt"),
             ("Taşma düzeltme (önce/sonra)", lambda: k().oto / "goruntu" / "karsilastir.html"),
             ("Teslim paketi", lambda: k().teslim / "index.html"),
+            ("Adım raporları (her çalışma)", lambda: k().adim_raporlari / "index.html"),
             ("Çıktı klasörü", lambda: k().kok),
         ]
 
@@ -652,6 +653,8 @@ class Uygulama:
         cikti.pack(side="left", padx=6)
         klasor = ttk.Button(dugmeler, text="Klasörü aç")
         klasor.pack(side="left")
+        rapor = ttk.Button(kart, text="Son adım raporunu aç")
+        rapor.pack(anchor="w", pady=(8, 0))
         ttk.Button(kart, text="Çalışacak komutu kayda yaz",
                    command=lambda g=grup: self._komut_goster(self.listeler[g].focus())
                    ).pack(anchor="w", pady=(8, 0))
@@ -661,7 +664,7 @@ class Uygulama:
         ipucu.pack(side="bottom", anchor="w")
         kart.bind("<Configure>", lambda e, ls=(baslik, aciklama, ciktilar, ipucu): _sar(ls, e.width - 40))
         self.ayrinti[grup] = dict(baslik=baslik, durum=durum, aciklama=aciklama, ciktilar=ciktilar,
-                                  calistir=calistir, cikti=cikti, klasor=klasor)
+                                  calistir=calistir, cikti=cikti, klasor=klasor, rapor=rapor)
         ilk = grup_adimlari(grup)[0].id
         t.selection_set(ilk)
         t.focus(ilk)
@@ -709,8 +712,12 @@ class Uygulama:
         else:
             a["ciktilar"].configure(text="Bu adım dosya üretmez; sonuç çalışma kaydında görünür.")
         var = [p for p in yollar_ if p.exists()]
+        rapor = adim_raporu.son_rapor(A.Klasorler(self.ayar).adim_raporlari, adim_id)
         a["calistir"].configure(command=lambda: self._baslat([adim_id]))
         a["cikti"].configure(state="normal" if var else "disabled", command=lambda: self._cikti_ac(adim_id))
+        a["rapor"].configure(state="normal" if rapor else "disabled",
+                             command=lambda: ac(adim_raporu.son_rapor(A.Klasorler(self.ayar).adim_raporlari,
+                                                                      adim_id)))
         a["klasor"].configure(state="normal" if yollar_ else "disabled",
                               command=lambda: self._klasor_ac(yollar_[0].parent))
 
@@ -1431,6 +1438,9 @@ class Uygulama:
         for r in sonuclar:
             ust = t.insert("", "end", text=r["ad"], open=True, tags=(r["sonuc"],), values=(
                 DURUM_YAZI[r["sonuc"]], sure_metni(r["sure_sn"]), f"{r['hata']} / {r['uyari']}", ""))
+            if r.get("rapor"):
+                oge = t.insert(ust, "end", text="    Adım raporu", values=("rapor", "", "", _kisa_yol(r["rapor"])))
+                self.sonuc_yollari[oge] = r["rapor"]
             for yol in r["ciktilar"]:
                 oge = t.insert(ust, "end", text="    " + Path(yol).name, values=("çıktı", "", "", _kisa_yol(yol)))
                 self.sonuc_yollari[oge] = yol

@@ -101,6 +101,7 @@ class Calistirici:
         self.en_cok = (None, 0)          # (toplam, biten): bu komutta görülen en büyük sayı
 
     def _adim(self, adim: Adim, ayar: dict, sira: int, toplam: int) -> str:
+        self.komut_metinleri = []
         try:
             komutlar = adim.komutlar(ayar)
         except Exception as e:  # ayar hatası (ör. geçersiz sayı) adımı düşürür, programı değil
@@ -109,6 +110,12 @@ class Calistirici:
             self._sorun("hata", f"Komut hazırlanamadı: {e}")
             return self._adim_bitir(adim, ayar, "hatali", 0.0)
         self._izleme_sifirla(adim, sira, toplam, len(komutlar))
+        self.komut_metinleri = []
+        for k in komutlar:
+            try:
+                self.komut_metinleri.append(k.goster())
+            except Exception:
+                pass
         self._kayit_ac(adim, ayar)
         self.olay({"tur": "adim_basladi", "id": adim.id, "ad": adim.ad, "sira": sira, "toplam": toplam})
         self._yaz_ve_kaydet(f"\n{'═' * 70}\n▶ [{sira}/{toplam}] {adim.ad}"
@@ -167,7 +174,15 @@ class Calistirici:
                  "hata": self.hata_sayisi, "uyari": self.uyari_sayisi,
                  "sorunlar": list(self.sorunlar), "ciktilar": ciktilar,
                  "kayit": str(self.kayit_yolu) if self.kayit_yolu else "",
-                 "bitis": datetime.now().strftime("%H:%M:%S")}
+                 "bitis": datetime.now().strftime("%H:%M:%S"), "rapor": ""}
+        try:   # her adım, ne üretirse üretsin, görülebilir bir rapor bırakır
+            from .adim_raporu import uret
+            kayit["rapor"] = str(uret(Klasorler(ayar).adim_raporlari, kayit,
+                                      getattr(self, "komut_metinleri", []), adim.aciklama,
+                                      f'{ayar.get("site_adi", "")} ({ayar.get("site_url", "")})'))
+            self.yaz(f"   Adım raporu: {kayit['rapor']}\n")
+        except Exception as e:      # rapor yazılamasa da adımın sonucu kaybolmasın
+            self.yaz(f"   [!] Adım raporu yazılamadı: {e}\n")
         self.sonuclar.append(kayit)
         self.olay({"tur": "adim_bitti", **kayit})
         return sonuc
