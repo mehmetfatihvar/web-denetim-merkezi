@@ -404,13 +404,15 @@ def _adimlar() -> List[Adim]:
              "401/403/404 dönen URL'leri tarayıcıda doğrudan açar: içerik gerçekten gelmiyor mu?",
              lambda a: [_py(a, "verify_routes.py", "--source", K(a).test / "results.jsonl",
                             "--out", K(a).rota_csv,
-                            *(["--limit", a["rota_limit"]] if a["rota_limit"] else []))],
+                            *(["--limit", a["rota_limit"]] if a["rota_limit"] else [])),
+                        _denetim_raporu("link", a)],
              lambda a: [K(a).rota_csv]),
         Adim("tiklama", "dogrulama", "Buton tıklama doğrulama",
              "Kırık link denetiminin bulduğu site içi kırık adreslere link veren sayfaları açar ve "
              "butona gerçekten tıklar: kırık sayfaya mı götürüyor? Önce 'Kırık link denetimi' gerekir.",
              lambda a: [_py(a, "verify_clicks.py", "--kirik-linkler", K(a).link / "broken_links.csv",
-                            "--limit", a["tiklama_limit"], "--out", K(a).tiklama_csv)],
+                            "--limit", a["tiklama_limit"], "--out", K(a).tiklama_csv),
+                        _denetim_raporu("link", a)],
              lambda a: [K(a).tiklama_csv]),
 
         # ---- Yapay zekâ görsel denetimi

@@ -123,11 +123,12 @@ border:1px solid currentColor}.e-hata{color:var(--hata)}.e-uyari{color:var(--uya
 """
 
 _JS = """
-var filtre={tur:'%(varsayilan)s',yer:'hepsi'},q='';
+var filtre={tur:'%(varsayilan)s',yer:'hepsi',teyit:'hepsi'},q='';
+function uyar(r,k,v){if(v==='hepsi')return true;if(k==='tur'&&v==='sorunlu')return r.dataset.sorunlu==='1';
+ return r.dataset[k]===v;}
 function uygula(){var n=0,s=document.querySelectorAll('#tablo tbody tr');
- for(var i=0;i<s.length;i++){var r=s[i];
-  var ok=(filtre.tur==='hepsi'||(filtre.tur==='sorunlu'?r.dataset.sorunlu==='1':r.dataset.tur===filtre.tur))
-   &&(filtre.yer==='hepsi'||r.dataset.yer===filtre.yer)&&(!q||r.textContent.toLowerCase().indexOf(q)>=0);
+ for(var i=0;i<s.length;i++){var r=s[i],ok=!q||r.textContent.toLowerCase().indexOf(q)>=0;
+  for(var k in filtre){if(!uyar(r,k,filtre[k]))ok=false;}
   r.style.display=ok?'':'none';if(ok)n++;}
  document.getElementById('sayac').textContent=n+' satır gösteriliyor';}
 document.querySelectorAll('.cip').forEach(function(c){c.onclick=function(){
@@ -168,53 +169,122 @@ def _cipler(grup: str, secenekler, etkin: str) -> str:
                    f'data-deger="{_e(deger)}">{_e(ad)}</button>' for deger, ad in secenekler)
 
 
-def link_raporu(csv_yolu: Path, html_yolu: Path, site_url: str = "", site_adi: str = "") -> dict:
-    """broken_links.csv -> HTML + Excel CSV. Özet sayıları döndürür."""
+TIKLAMA = {   # verify_clicks kararı -> (gösterilen, sınıf, süzgeç değeri)
+    "KIRIGA GÖTÜRÜYOR": ("Tıklayınca kırığa gidiyor", "e-hata", "kirik"),
+    "ÇALIŞAN YERE GİDİYOR": ("Tıklayınca çalışan yere gidiyor (yanlış alarm)", "e-iyi", "alarm"),
+    "LİNK/BUTON YOK": ("Sayfada tıklanır öğe yok", "e-uyari", "belirsiz"),
+    "REFERRER AÇILMADI": ("Link veren sayfa açılmadı", "e-uyari", "belirsiz"),
+}
+
+
+def _teyitler(rota_csv: Optional[Path], tiklama_csv: Optional[Path]) -> Dict[str, dict]:
+    """url -> {'tiklama': karar, 'rota': karar}. Doğrulama adımlarının CSV'lerinden."""
+    t: Dict[str, dict] = {}
+    for r in (_oku_ham(tiklama_csv) if tiklama_csv else []):
+        if r.get("kirik_url"):
+            t.setdefault(r["kirik_url"], {})["tiklama"] = (r.get("verdict") or "").strip()
+    for r in (_oku_ham(rota_csv) if rota_csv else []):
+        if r.get("url"):
+            t.setdefault(r["url"], {})["rota"] = (r.get("verdict") or "").strip()
+    return t
+
+
+def _oku_ham(yol: Path) -> List[dict]:
+    try:
+        with open(yol, encoding="utf-8-sig", newline="") as f:
+            return list(csv.DictReader(f))
+    except OSError:
+        return []
+
+
+def _teyit_hucre(t: dict):
+    """(html, süzgeç değeri, düz metin)"""
+    parcalar, deger, duz = [], "yok", []
+    k = t.get("tiklama")
+    if k:
+        ad, sinif, deger = TIKLAMA.get(k, (k, "e-uyari", "belirsiz"))
+        parcalar.append(f'<span class="etiket {sinif}">{_e(ad)}</span>')
+        duz.append(ad)
+    r = t.get("rota")
+    if r:
+        if r.startswith("GERÇEKTEN KIRIK"):
+            ad, sinif = "Doğrudan açınca kırık", "e-hata"
+            deger = deger if deger != "yok" else "kirik"
+        elif r.startswith(("İÇERİK GELİYOR", "ÇALIŞIYOR")):
+            ad, sinif = "Doğrudan açınca içerik geliyor", "e-iyi"
+            deger = deger if deger != "yok" else "alarm"
+        else:
+            ad, sinif = r, "e-uyari"
+        parcalar.append(f'<div><span class="etiket {sinif}">{_e(ad)}</span></div>')
+        duz.append(ad)
+    if not parcalar:
+        return '<span class="soluk">teyit edilmedi</span>', "yok", ""
+    return "".join(parcalar), deger, " / ".join(duz)
+
+
+def link_raporu(csv_yolu: Path, html_yolu: Path, site_url: str = "", site_adi: str = "",
+                rota_csv: Optional[Path] = None, tiklama_csv: Optional[Path] = None) -> dict:
+    """broken_links.csv -> HTML + Excel CSV. Doğrulama adımlarının (doğrudan erişim, buton
+    tıklama) kararları varsa site içi kırık bağlantıların yanında gösterilir."""
     kayitlar = _oku(csv_yolu)
+    teyit = _teyitler(rota_csv, tiklama_csv)
     site = _alan(site_url)
     satirlar = []
     for r in kayitlar:
         tur = link_turu(r.get("status", ""))
         alan = _alan(r["url"])
         yer = "ic" if site and (alan == site or alan.endswith("." + site)) else "dis"
-        satirlar.append((r, tur, alan, yer))
-    turler = Counter(t for _, t, _, _ in satirlar)
-    alanlar = Counter(a for _, _, a, _ in satirlar)
-    ic = sum(1 for *_, y in satirlar if y == "ic")
+        satirlar.append((r, tur, alan, yer, _teyit_hucre(teyit.get(r["url"], {}))))
+    turler = Counter(t for _, t, _, _, _ in satirlar)
+    alanlar = Counter(a for _, _, a, _, _ in satirlar)
+    ic = sum(1 for _, _, _, y, _ in satirlar if y == "ic")
+    teyit_say = Counter(h[1] for *_, h in satirlar)
 
     kutular = (f'<div class="kutular"><div class="kutu hata"><b>{len(satirlar):,}</b>kırık bağlantı</div>'
                f'<div class="kutu"><b>{ic:,}</b>site içi</div>'
                f'<div class="kutu"><b>{len(satirlar) - ic:,}</b>dış site</div>'
-               f'<div class="kutu"><b>{len(alanlar):,}</b>farklı alan adı</div></div>').replace(",", ".")
+               f'<div class="kutu"><b>{len(alanlar):,}</b>farklı alan adı</div>' +
+               (f'<div class="kutu hata"><b>{teyit_say["kirik"]:,}</b>tıklama/erişimle kırık teyitli</div>'
+                f'<div class="kutu iyi"><b>{teyit_say["alarm"]:,}</b>yanlış alarm (aslında açılıyor)</div>'
+                if teyit else "") + '</div>').replace(",", ".")
     alan_tablo = "".join(f"<tr><td>{_e(a or '(adres çözülemedi)')}</td><td>{n}</td></tr>"
                          for a, n in alanlar.most_common(15))
     tur_cip = [("hepsi", f"Tümü ({len(satirlar)})")] + [(t, f"{t} ({n})") for t, n in turler.most_common()]
     yer_cip = [("hepsi", "İç + dış"), ("ic", f"Site içi ({ic})"), ("dis", f"Dış ({len(satirlar) - ic})")]
+    teyit_cip = [("hepsi", "Teyit: hepsi"), ("kirik", f"Kırık teyitli ({teyit_say['kirik']})"),
+                 ("alarm", f"Yanlış alarm ({teyit_say['alarm']})"),
+                 ("belirsiz", f"Belirsiz ({teyit_say['belirsiz']})"),
+                 ("yok", f"Teyit edilmedi ({teyit_say['yok']})")]
     govde_satir = "".join(
-        f'<tr data-tur="{_e(t)}" data-yer="{y}" data-sorunlu="1"><td class="url">{_baglanti(r["url"])}</td>'
+        f'<tr data-tur="{_e(t)}" data-yer="{y}" data-teyit="{h[1]}" data-sorunlu="1">'
+        f'<td class="url">{_baglanti(r["url"])}</td>'
         f'<td class="durum"><span class="etiket e-hata">{_e(t)}</span><div class="soluk">{_e(r.get("status", ""))[:120]}'
-        f'</div></td><td>{"Site içi" if y == "ic" else "Dış"}</td>'
+        f'</div></td><td>{"Site içi" if y == "ic" else "Dış"}</td><td class="durum">{h[0]}</td>'
         f'<td class="url">{_baglanti(r.get("kaynak_sayfa", ""), 90)}</td><td>{_e(r.get("buton_metni", ""))}</td></tr>'
-        for r, t, a, y in sorted(satirlar, key=lambda x: (x[3], x[1], x[0]["url"])))
+        for r, t, a, y, h in sorted(satirlar, key=lambda x: (x[3], x[4][1] != "kirik", x[1], x[0]["url"])))
     govde = (kutular +
              '<h2>En çok kırık bağlantı olan alan adları</h2><table class="alan"><thead><tr><th>Alan adı</th>'
              f'<th>Kırık</th></tr></thead><tbody>{alan_tablo}</tbody></table>'
              '<h2>Bütün kırık bağlantılar</h2>'
              f'<div class="cubuk">{_cipler("tur", tur_cip, "hepsi")}</div>'
-             f'<div class="cubuk">{_cipler("yer", yer_cip, "hepsi")}'
-             '<input type="search" id="ara" placeholder="Adres, sayfa ya da buton metninde ara…"></div>'
+             f'<div class="cubuk">{_cipler("yer", yer_cip, "hepsi")}</div>'
+             + (f'<div class="cubuk">{_cipler("teyit", teyit_cip, "hepsi")}</div>' if teyit else "") +
+             '<div class="cubuk"><input type="search" id="ara" placeholder="Adres, sayfa ya da buton metninde ara…"></div>'
              '<div class="sayac" id="sayac"></div><div class="kap"><table id="tablo"><thead><tr><th>Kırık adres</th>'
-             '<th>Sorun</th><th>Yer</th><th>Linki veren sayfa</th><th>Buton/link metni</th></tr></thead>'
+             '<th>Sorun</th><th>Yer</th><th>Teyit</th><th>Linki veren sayfa</th><th>Buton/link metni</th></tr></thead>'
              f'<tbody>{govde_satir}</tbody></table></div>')
     alt = (f'{_e(site_adi)} · Sayfalardaki bütün bağlantılar tek tek denendi; burada yalnız '
-           f'açılmayanlar var. Üretildi: {datetime.now():%d.%m.%Y %H:%M} · Kaynak: {_e(csv_yolu.name)}')
+           f'açılmayanlar var. <b>Teyit</b> sütunu Doğrulama adımlarının sonucudur: site içi kırık '
+           f'adres tarayıcıda doğrudan açıldı ve/veya link veren sayfada butona gerçekten tıklandı '
+           f'(tıklama örneklemle yapılır, bkz. Ayarlar). Üretildi: {datetime.now():%d.%m.%Y %H:%M} · Kaynak: {_e(csv_yolu.name)}')
     html_yolu.write_text(_sayfa("Kırık bağlantı raporu", alt, govde, "hepsi"), encoding="utf-8")
     _excel_csv(html_yolu.with_name("kirik_linkler_excel.csv"),
-               ["Kırık adres", "Sorun", "HTTP durumu / hata", "Yer", "Alan adı", "Linki veren sayfa",
+               ["Kırık adres", "Sorun", "HTTP durumu / hata", "Yer", "Alan adı", "Teyit", "Linki veren sayfa",
                 "Buton/link metni"],
-               [[r["url"], t, r.get("status", ""), "Site içi" if y == "ic" else "Dış", a,
-                 r.get("kaynak_sayfa", ""), r.get("buton_metni", "")] for r, t, a, y in satirlar])
-    return {"toplam": len(satirlar), "ic": ic, "turler": dict(turler)}
+               [[r["url"], t, r.get("status", ""), "Site içi" if y == "ic" else "Dış", a, h[2],
+                 r.get("kaynak_sayfa", ""), r.get("buton_metni", "")] for r, t, a, y, h in satirlar])
+    return {"toplam": len(satirlar), "ic": ic, "turler": dict(turler),
+            "teyit_kirik": teyit_say["kirik"], "teyit_alarm": teyit_say["alarm"]}
 
 
 def belge_raporu(csv_yolu: Path, html_yolu: Path, site_adi: str = "") -> dict:
@@ -266,19 +336,27 @@ def belge_raporu(csv_yolu: Path, html_yolu: Path, site_adi: str = "") -> dict:
 
 
 # ------------------------------------------------------------------ programdan kullanım
-def _guncel(csv_yolu: Path, html_yolu: Path, uret) -> Optional[Path]:
-    """CSV varsa ve HTML yoksa ya da eskiyse raporu üretir; HTML yolunu döndürür."""
+def _guncel(csv_yolu: Path, html_yolu: Path, uret, *ekler: Path) -> Optional[Path]:
+    """CSV varsa ve HTML yoksa ya da CSV'den (veya eklerden) eskiyse raporu üretir."""
     if not csv_yolu.exists():
         return None
-    if not html_yolu.exists() or html_yolu.stat().st_mtime < csv_yolu.stat().st_mtime:
+    kaynak = max([csv_yolu.stat().st_mtime] + [e.stat().st_mtime for e in ekler if e.exists()])
+    if not html_yolu.exists() or html_yolu.stat().st_mtime < kaynak:
         uret()
     return html_yolu
 
 
-def link_raporu_yolu(ayar: dict) -> Path:
+def _link_uret(ayar: dict):
     k = Klasorler(ayar)
     c, h = k.link / "broken_links.csv", k.link / "kirik_link_raporu.html"
-    return _guncel(c, h, lambda: link_raporu(c, h, ayar.get("site_url", ""), ayar.get("site_adi", ""))) or h
+    return c, h, lambda: link_raporu(c, h, ayar.get("site_url", ""), ayar.get("site_adi", ""),
+                                     k.rota_csv, k.tiklama_csv)
+
+
+def link_raporu_yolu(ayar: dict) -> Path:
+    k = Klasorler(ayar)
+    c, h, uret = _link_uret(ayar)
+    return _guncel(c, h, uret, k.rota_csv, k.tiklama_csv) or h
 
 
 def belge_raporu_yolu(ayar: dict) -> Path:
@@ -292,12 +370,14 @@ def adim_komutu(tur: str, ayar: dict):
     def calis(yaz):
         k = Klasorler(ayar)
         if tur == "link":
-            c, h = k.link / "broken_links.csv", k.link / "kirik_link_raporu.html"
+            c, h, uret = _link_uret(ayar)
             if not c.exists():
                 yaz("Kırık bağlantı bulunmadı ya da denetim tamamlanmadı; rapor üretilmedi.\n")
                 return 0
-            o = link_raporu(c, h, ayar.get("site_url", ""), ayar.get("site_adi", ""))
-            yaz(f"Kırık bağlantı raporu: {o['toplam']} kırık ({o['ic']} site içi) -> {h}\n")
+            o = uret()
+            teyit = (f"; teyit: {o['teyit_kirik']} kırık, {o['teyit_alarm']} yanlış alarm"
+                     if o["teyit_kirik"] or o["teyit_alarm"] else "")
+            yaz(f"Kırık bağlantı raporu: {o['toplam']} kırık ({o['ic']} site içi{teyit}) -> {h}\n")
         else:
             c, h = k.belge / "documents_audit.csv", k.belge / "belge_raporu.html"
             if not c.exists():
