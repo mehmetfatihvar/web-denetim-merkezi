@@ -275,43 +275,86 @@ class AnalizTestleri(unittest.TestCase):
         self.assertIn("instead of Turkish letters", talimat)
         self.assertIn("- Turkish text is expected and correct.", talimat)
 
-    def test_ilerleme_basarili_sayisi_ve_zaman_asimi(self):
-        """İlerleme satırı başarılı/yapılamayan sayısını gösterir; asılı bağlantı hata sayılır."""
+    def _analiz_hazirla(self, sayi=20):
         try:
             import PIL  # noqa: F401
         except ImportError:
             self.skipTest("pillow yok")
-        import contextlib, io, sys, tempfile, types
         sys.path.insert(0, str(yollar.GORSEL_DENETIM))
         import analiz
         from PIL import Image
         d = Path(tempfile.mkdtemp())
         ornekler = []
-        for k in range(20):
+        for k in range(sayi):
             p = d / f"s{k}.png"
             Image.new("RGB", (400, 300), "white").save(p)
             ornekler.append({"dosya": p.name, "tam_yol": p, "cihaz": "desktop", "sayfa": "u",
                              "sablon": "x"})
+        return analiz, d, ornekler
 
+    @staticmethod
+    def _sahte(bozuk):
+        """bozuk(n): n. çağrı zaman aşımına uğrasın mı."""
         class Sahte:
             ad, kapali, n = "gemini:sahte", False, 0
 
             def sor(self, png, baglam):
                 Sahte.n += 1
-                if Sahte.n % 4 == 0:
+                if bozuk(Sahte.n):
                     raise TimeoutError("The read operation timed out")
-                return {"sorunlar": []}, {"girdi": 1, "cikti": 1}, ""
+                return {"defects": []}, {"girdi": 1, "cikti": 1}, ""
 
             def hata_tekrar_denenir_mi(self, e):
                 return False
+        return Sahte()
 
+    def test_ilerleme_basarili_sayisi_ve_zaman_asimi(self):
+        """İlerleme satırı başarılı/yapılamayan sayısını gösterir; asılı bağlantı hata sayılır."""
+        import contextlib, io, types
+        analiz, d, ornekler = self._analiz_hazirla()
         cikti = io.StringIO()
         with contextlib.redirect_stdout(cikti):
-            analiz.calistir(types.SimpleNamespace(dilim=3, toplu=False, paralel=1),
-                            ornekler, d, [Sahte()])
+            _, sayac = analiz.calistir(types.SimpleNamespace(dilim=3, toplu=False, paralel=1),
+                                       ornekler, d, [self._sahte(lambda n: n % 4 == 0)])
         self.assertIn("[20/20] ✓ 15 başarılı  ✗ 5 yapılamadı", cikti.getvalue())
-        self.assertIn("zaman aşımı", cikti.getvalue())
+        self.assertEqual(sayac, {"zaman aşımı (cevap gelmedi)": 5})
         self.assertTrue(analiz.zaman_asimi_mi(TimeoutError("x")))
+
+    def test_ilk_model_yapilamayanlari_ayni_calistirmada_yeniden_dener(self):
+        import contextlib, io, types
+        analiz, d, ornekler = self._analiz_hazirla()
+        a = types.SimpleNamespace(dilim=3, toplu=False, paralel=1, tekrar_tur=2)
+        ist = self._sahte(lambda n: n <= 20 and n % 4 == 0)   # yalnız ilk turda 5 hata
+        cikti = io.StringIO()
+        with contextlib.redirect_stdout(cikti):
+            analiz.turlarla_calistir(a, ornekler, d, [ist])
+            k = analiz.kapsam(ornekler, d, ist.ad, 3)
+            analiz.yapilamayan_ozeti(k, 2)
+        self.assertIn("Yeniden deneme turu 1/2: 5 yapılamayan", cikti.getvalue())
+        self.assertNotIn("turu 2/2", cikti.getvalue())
+        self.assertEqual((k["beklenen"], k["tamam"], k["yapilamadi"], k["denenmedi"]), (20, 20, 0, 0))
+        self.assertIn("hepsi tamamlandı", cikti.getvalue())
+
+    def test_hakem_ilk_model_bitmeden_baslamaz(self):
+        """Yarıda kalan (hiç denenmemiş dilimi olan) ilk modelden sonra hakem çalışmaz;
+        denemelere rağmen yapılamayanlar ise hakeme gider."""
+        import contextlib, io, types
+        analiz, d, ornekler = self._analiz_hazirla()
+        a = types.SimpleNamespace(dilim=3, toplu=False, paralel=1, tekrar_tur=0, zorla=False,
+                                  modeller="gemini:sahte", claude_model="c", gemini_model="g")
+        with contextlib.redirect_stdout(io.StringIO()):
+            analiz.calistir(a, ornekler[:10], d, [self._sahte(lambda n: n == 3)])
+            self.assertFalse(analiz.ilk_model_tamam_mi(a, ornekler, d, "gemini:hakem"))
+            analiz.calistir(a, ornekler, d, [self._sahte(lambda n: False)])
+            self.assertTrue(analiz.ilk_model_tamam_mi(a, ornekler, d, "gemini:hakem"))
+        k = analiz.kapsam(ornekler, d, "gemini:sahte", 3)
+        self.assertEqual((k["tamam"], k["denenmedi"]), (20, 0))
+        # hata türünden bağımsız: zaman aşımı alan ve hiç başarısı olmayan dilim hakeme gider
+        with open(d / "sonuclar.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps({"model": "gemini:sahte", "dosya": "yok.png", "dilim": 1,
+                                "sablon": "x", "cihaz": "desktop", "cevap": None,
+                                "hata": "TimeoutError: timed out"}) + "\n")
+        self.assertIn(("yok.png", 1), analiz.hakem_dilimleri(d, "gemini:hakem"))
 
 
 if __name__ == "__main__":
@@ -481,6 +524,29 @@ class AnaSayfaTestleri(GeciciKlasor):
         self.assertEqual(kutu["Site haritası"][0], "2")
         self.assertEqual(kutu["Test edilen"][0], "2")
         self.assertEqual(kutu["Kırık sayfa"][0], "1")
+
+    def test_ilk_model_ve_hakem_ayri_asamalar(self):
+        """Ana sayfada ilk model ve hakem ayrı satır/düğme; ilk model kapsamı kapsam.json'dan."""
+        from merkez.ayarlar import Klasorler
+        from merkez.durum import yol_haritasi
+        ayar = dict(A.VARSAYILAN, cikti_koku=str(self.t / "cikti"), harita=str(self.t / "yok.json"))
+        satirlar = {r[0]: r for r in yol_haritasi(ayar)}
+        ilk, hakem = satirlar["Yapay zekâ: ilk model"], satirlar["Yapay zekâ: hakem ve rapor"]
+        self.assertEqual(ilk[4], ["ai_analiz"])
+        self.assertEqual(hakem[4][0], "ai_hakem")
+        self.assertFalse(ilk[2])
+        ai = Klasorler(ayar).ai_sonuc
+        ai.mkdir(parents=True)
+        m = {"model": "gemini:g", "beklenen": 100, "tamam": 60, "yapilamadi": 5, "kota": 0,
+             "denenmedi": 35, "turler": {}}
+        (ai / "kapsam.json").write_text(json.dumps({"ilk_model": {"modeller": [m]}}), encoding="utf-8")
+        ilk = {r[0]: r for r in yol_haritasi(ayar)}["Yapay zekâ: ilk model"]
+        self.assertFalse(ilk[2])
+        self.assertEqual(ilk[3], "60/100 dilim, 5 yapılamadı, 35 denenmedi")
+        m.update(tamam=95, denenmedi=0)
+        (ai / "kapsam.json").write_text(json.dumps({"ilk_model": {"modeller": [m]}}), encoding="utf-8")
+        ilk = {r[0]: r for r in yol_haritasi(ayar)}["Yapay zekâ: ilk model"]
+        self.assertTrue(ilk[2])                          # yapılamayan 5 dilim hakeme gider
 
 
 class SozlesmeTestleri(unittest.TestCase):

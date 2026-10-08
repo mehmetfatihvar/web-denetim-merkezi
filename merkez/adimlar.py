@@ -250,7 +250,8 @@ def _hakem(ayar):
     """Hakem turu. Hata türü örneklemesinde ("tur") ana modelin hiç bakamadığı dilimler
     (ör. Gemma kalıcı 500) örnekleme dışında kalır; onlar ikinci bir turda hakeme gider ki hiçbir
     dilim denetimsiz kalmasın."""
-    toplu = ["--toplu"] if ayar["ai_toplu"] else []
+    # --modeller: hakem, ilk modelin her dilimi denediğini kontrol etmeden başlamaz
+    toplu = ["--modeller", ayar["ai_modeller"]] + (["--toplu"] if ayar["ai_toplu"] else [])
     if not ayar["ai_hakem_ornek"]:
         return [_analiz(ayar, "--hakem", ayar["ai_hakem"], *toplu)]
     komutlar = [_analiz(ayar, "--hakem", ayar["ai_hakem"], "--hakem-ornek", ayar["ai_hakem_ornek"],
@@ -461,16 +462,18 @@ def _adimlar() -> List[Adim]:
              "API çağırmadan seçili modellerle kaç istek ve ne kadar maliyet çıkacağını gösterir.",
              lambda a: [_analiz(a, "--modeller", a["ai_modeller"], "--tahmin")], sure="saniyeler"),
         Adim("ai_analiz", "ai", "3b. Yapay zekâ analizi",
-             "Görüntüleri dilimleyip seçili modellere aynı talimat ve JSON şemasıyla sorar. "
-             "Yarıda kalırsa ya da sonunda 'N istek yapılamadı' uyarısı çıkarsa (Gemma 500, kota) "
-             "tekrar çalıştırın: yalnız yapılamayanlar denenir. Sonra 3c ve sonrasını da çalıştırın.",
+             "İlk model aşaması. Görüntüleri dilimleyip seçili modellere aynı talimat ve JSON "
+             "şemasıyla sorar; yapılamayanları aynı çalıştırmada 2 tur daha dener. Sonda kapsamı "
+             "yazar (ör. 4084 dilimden 3990 tamam). Hiç denenmemiş ya da kota yüzünden kalan dilim "
+             "varsa adım başarısız biter ve hakeme geçilmez: tekrar çalıştırın, yalnız eksikler denenir.",
              lambda a: [_analiz(a, "--modeller", a["ai_modeller"])],
              lambda a: [K(a).ai_sonuc / "bulgular.csv", K(a).ai_sonuc / "oylama.csv",
                         K(a).ai_sonuc / "ozet.txt"]),
         Adim("ai_hakem", "ai", "3c. Hakem modeli",
-             "Modellerin anlaşamadığı veya yüksek önem verdiği dilimleri ve ana modelin hiç "
-             "bakamadığı dilimleri (ör. Gemma kalıcı 500) hakem modele sorar. 3b yeniden "
-             "çalıştırıldıysa bu adımı ve sonrasını da yeniden çalıştırın.",
+             "Hakem aşaması. Önce ilk modelin her dilimi denediğini kontrol eder; eksik varsa "
+             "başlamaz. Modellerin anlaşamadığı veya yüksek önem verdiği dilimleri ve ilk modelin "
+             "denemelere rağmen bakamadığı dilimleri (Gemma 500, zaman aşımı) hakem modele sorar. "
+             "3b yeniden çalıştırıldıysa bu adımı ve sonrasını da yeniden çalıştırın.",
              _hakem,
              lambda a: [K(a).ai_sonuc / "oylama.csv"]),
         Adim("ai_isabet", "ai", "4. İsabet ölçümü",

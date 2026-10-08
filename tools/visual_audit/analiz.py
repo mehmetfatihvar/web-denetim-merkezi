@@ -47,6 +47,11 @@ Kullanım:
   bulgular.csv    - her bulgu bir satır
   oylama.csv      - aynı dilimde aynı türde hata bulan model sayısı
   ozet.txt        - model başına bulgu sayısı, token kullanımı, tahmini maliyet
+  kapsam.json     - ilk model / hakem: beklenen dilim, tamam, yapılamayan, hiç denenmeyen
+
+İki aşama: önce ilk model(ler) her dilimi dener (yapılamayanlar aynı çalıştırmada --tekrar-tur
+kadar yeniden denenir); hiç denenmemiş ya da kota yüzünden kalan dilim varsa çıkış kodu 3 olur.
+Hakem (--hakem) ilk model tamamlanmadan başlamaz (--zorla ile geçilebilir).
 
 Bağımlılıklar: pip install pillow anthropic google-genai ollama
 """
@@ -170,6 +175,20 @@ def dilim_secimi(toplam, max_dilim):
     return list(range(max_dilim - 1)) + [toplam - 1]
 
 
+def _dilim_toplam(w, h, cihaz):
+    hedef_w, dilim_h = DILIM.get(cihaz, VARSAYILAN_DILIM)
+    H = round(h * hedef_w / w) if w > hedef_w else h
+    return max(1, -(-H // dilim_h))
+
+
+def dilim_numaralari(yol, cihaz, max_dilim):
+    """Görüntünün analize girecek dilim numaraları (1'den); görüntü çözülmeden, yalnız
+    boyutundan hesaplanır. dilimle() ile aynı kural."""
+    with Image.open(yol) as im:
+        w, h = im.size
+    return [i + 1 for i in dilim_secimi(_dilim_toplam(w, h, cihaz), max_dilim)]
+
+
 def dilimle(yol, cihaz, max_dilim, secili=None):
     """Görüntüyü hedef genişliğe küçültür ve dilimler; uzun sayfalarda son dilim (footer)
     de alınır. PNG baytları döner."""
@@ -181,7 +200,7 @@ def dilimle(yol, cihaz, max_dilim, secili=None):
             im = im.resize((hedef_w, round(h * hedef_w / w)), Image.LANCZOS)
         W, H = im.size
         oran = w / W
-        toplam = max(1, -(-H // dilim_h))
+        toplam = _dilim_toplam(w, h, cihaz)
         dilimler = []
         # secili verilirse (hakem modu) seçim kuralından bağımsız olarak o dilimler üretilir
         sira = (sorted(n - 1 for n in secili if 0 < n <= toplam) if secili is not None
@@ -471,6 +490,13 @@ class OpenAIUyumlu:
                                         "timed out", "Connection"))
 
 
+def istemci_adi(ad, a):
+    """istemci_olustur(ad, a).ad ile aynı ad; istemci (ve anahtarı) oluşturmadan."""
+    tur, _, model = ad.partition(":")
+    varsayilan = {"claude": a.claude_model, "gemini": a.gemini_model}.get(tur, "")
+    return f"{tur}:{model or varsayilan}"
+
+
 def istemci_olustur(ad, a):
     """'claude', 'claude:<model>', 'gemini', 'gemini:<model>', 'ollama:<model>',
     'openai:<model>' (OpenAI uyumlu herhangi bir servis, --openai-url ile)"""
@@ -598,7 +624,8 @@ def hakem_dilimleri(cikti, hakem_ad, ornek=0, grup="sablon", sadece_bakilamayan=
     bakan = defaultdict(set)
     bulan = defaultdict(set)
     yuksek = defaultdict(set)   # dilim -> 'high' verilen türler
-    kalici_hata = set()         # ana modelin hiç bakamadığı dilimler (ör. Gemma kalıcı 500)
+    kalici_hata = set()         # ana modelin hiç bakamadığı dilimler (ör. Gemma kalıcı 500,
+    #                             zaman aşımı); tekrar denemelere rağmen başarısı olmayanlar
     grup_bilgisi = {}           # dilim -> (şablon, cihaz)
     with open(yol, encoding="utf-8") as f:
         for satir in f:
@@ -611,8 +638,7 @@ def hakem_dilimleri(cikti, hakem_ad, ornek=0, grup="sablon", sadece_bakilamayan=
             k = (r["dosya"], r["dilim"])
             grup_bilgisi[k] = (r.get("sablon", ""), r.get("cihaz", ""))
             if r["hata"]:
-                if "kalici" in r["hata"]:
-                    kalici_hata.add(k)
+                kalici_hata.add(k)
                 continue
             bakan[k].add(r["model"])
             for d in (r["cevap"] or {}).get("defects", []):
@@ -654,6 +680,8 @@ def hakem_dilimleri(cikti, hakem_ad, ornek=0, grup="sablon", sadece_bakilamayan=
 
 
 def calistir(a, ornekler, cikti, istemciler, filtre=None):
+    """Yapılmamış (hiç denenmemiş ya da hata almış) istekleri gönderir.
+    Döner: (gönderilen istek sayısı, yapılamayan türlerinin sayacı)."""
     onbellek_yol = cikti / "sonuclar.jsonl"
     bitti = onbellegi_oku(onbellek_yol)
     kilit = threading.Lock()
@@ -665,6 +693,10 @@ def calistir(a, ornekler, cikti, istemciler, filtre=None):
             secili = ({n for (dosya, n) in filtre if dosya == o["dosya"]}
                       if filtre is not None else None)
             if secili is not None and not secili:
+                continue
+            # bütün dilimleri bütün modellerce yapılmış görüntü yeniden dilimlenmez
+            numaralar = secili or dilim_numaralari(o["tam_yol"], o["cihaz"], a.dilim)
+            if all((ist.ad, o["dosya"], n) in bitti for ist in istemciler for n in numaralar):
                 continue
             genislik, dilimler = dilimle(o["tam_yol"], o["cihaz"], a.dilim, secili)
         except Exception as e:
@@ -686,7 +718,7 @@ def calistir(a, ornekler, cikti, istemciler, filtre=None):
                 toplu_calistir(ist, [i for i in isler if i["istemci"] is ist], cikti)
         isler = [i for i in isler if not isinstance(i["istemci"], Claude)]
     if not isler:
-        return
+        return 0, Counter()
 
     paralel ={ist.ad: (1 if ist.ad.startswith("ollama:") else a.paralel) for ist in istemciler}
     havuzlar = {ad: ThreadPoolExecutor(max_workers=n) for ad, n in paralel.items()}
@@ -720,7 +752,87 @@ def calistir(a, ornekler, cikti, istemciler, filtre=None):
                       flush=True)
     for h in havuzlar.values():
         h.shutdown()
-    yapilamayan_ozeti(yapilamayan, len(isler), hakem=filtre is not None)
+    return len(isler), yapilamayan
+
+
+def turlarla_calistir(a, ornekler, cikti, istemciler, filtre=None):
+    """İlk tur + yapılamayanlar için --tekrar-tur kadar yeniden deneme turu."""
+    gonderilen, sayac = calistir(a, ornekler, cikti, istemciler, filtre)
+    for tur in range(1, a.tekrar_tur + 1):
+        if not sum(sayac.values()):
+            break
+        if all(getattr(ist, "kapali", False) for ist in istemciler):
+            break   # kota bitti / model kapalı: bugün tekrar denemenin anlamı yok
+        print(f"\n🔁 Yeniden deneme turu {tur}/{a.tekrar_tur}: "
+              f"{sum(sayac.values())} yapılamayan istek tekrar gönderiliyor", flush=True)
+        _, sayac = calistir(a, ornekler, cikti, istemciler, filtre)
+    return gonderilen, sayac
+
+
+# ------------------------------------------------------------------ KAPSAM
+
+KOTA_IZI = ("kota_bitti", "429", "RESOURCE_EXHAUSTED", "PerDay", "per day")
+
+
+def kapsam(ornekler, cikti, model, max_dilim, filtre=None):
+    """Bir modelin beklenen dilimlerden kaçına baktığı. Beklenen: ornekler'in dilimleri
+    (ya da hakem için filtre). Döner: beklenen, tamam, yapilamadi, kota, denenmedi, turler."""
+    if filtre is not None:
+        beklenen = set(filtre)
+    else:
+        beklenen = set()
+        for o in ornekler:
+            try:
+                beklenen.update((o["dosya"], n)
+                                for n in dilim_numaralari(o["tam_yol"], o["cihaz"], max_dilim))
+            except Exception:
+                continue   # açılamayan görüntü dilimlenemez, analize de girmez
+    tamam, son_hata = set(), {}
+    yol = cikti / "sonuclar.jsonl"
+    if yol.exists():
+        with open(yol, encoding="utf-8") as f:
+            for satir in f:
+                try:
+                    r = json.loads(satir)
+                except json.JSONDecodeError:
+                    continue
+                if r.get("model") != model:
+                    continue
+                k = (r["dosya"], r["dilim"])
+                if r.get("hata"):
+                    son_hata[k] = r["hata"]
+                else:
+                    tamam.add(k)
+    tamam &= beklenen
+    yapilamadi = {k: h for k, h in son_hata.items() if k in beklenen and k not in tamam}
+    kota = sum(1 for h in yapilamadi.values() if any(i in h for i in KOTA_IZI))
+    return {"model": model, "beklenen": len(beklenen), "tamam": len(tamam),
+            "yapilamadi": len(yapilamadi), "kota": kota,
+            "denenmedi": len(beklenen) - len(tamam) - len(yapilamadi),
+            "turler": dict(Counter(hata_turu(h) for h in yapilamadi.values()))}
+
+
+def kapsam_satiri(k):
+    return (f"{k['tamam']}/{k['beklenen']} dilim tamam, {k['yapilamadi']} yapılamadı"
+            + (f" ({k['kota']} kota)" if k["kota"] else "")
+            + (f", {k['denenmedi']} hiç denenmedi" if k["denenmedi"] else ""))
+
+
+def kapsam_yaz(cikti, anahtar, kayitlar):
+    """kapsam.json: arayüz ilk model / hakem aşamalarının durumunu buradan okur."""
+    yol = cikti / "kapsam.json"
+    try:
+        veri = json.loads(yol.read_text(encoding="utf-8"))
+    except Exception:
+        veri = {}
+    veri[anahtar] = {"zaman": time.strftime("%Y-%m-%d %H:%M"), "modeller": kayitlar}
+    yol.write_text(json.dumps(veri, ensure_ascii=False, indent=1), encoding="utf-8")
+
+
+def eksik_sayisi(k):
+    """Hakeme geçmeden önce ilk modelde tamamlanması gerekenler: hiç denenmemiş ya da kota
+    yüzünden yapılamamış dilimler (bunlar ertesi gün ilk modelle yapılabilir)."""
+    return k["denenmedi"] + k["kota"]
 
 
 def hata_turu(hata):
@@ -735,25 +847,31 @@ def hata_turu(hata):
     return "bağlantı / sunucu hatası"
 
 
-def yapilamayan_ozeti(sayac, toplam, hakem=False):
-    """Çalışma sonunda kaç isteğin yapılamadığını ve ne yapılacağını açıkça yazar."""
-    n = sum(sayac.values())
-    if not n:
-        print(f"\n✅ {toplam} isteğin hepsi tamamlandı.")
+def yapilamayan_ozeti(k, tekrar_tur, hakem=False):
+    """Çalışma sonunda kapsamı, kalan yapılamayanları ve ne yapılacağını açıkça yazar."""
+    ad = "Hakem" if hakem else "İlk model"
+    print(f"\n📋 {ad} ({k['model']}): {kapsam_satiri(k)}", flush=True)
+    if not k["yapilamadi"] and not k["denenmedi"]:
+        print(f"✅ {ad}: beklenen dilimlerin hepsi tamamlandı."
+              + ("" if hakem else " Sıradaki aşama: 3c. Hakem modeli."), flush=True)
         return
-    ayrinti = ", ".join(f"{a}: {s}" for a, s in sayac.most_common())
+    ayrinti = ", ".join(f"{a}: {s}" for a, s in sorted(k["turler"].items(), key=lambda x: -x[1]))
     if hakem:
-        print(f"\n⚠ Hakem: {toplam} istekten {n} tanesi yapılamadı ({ayrinti}).\n"
-              "   NE YAPMALI: Aynı adımı (3c. Hakem modeli) tekrar çalıştırın; yalnız yapılamayanlar\n"
-              "   yeniden denenir. Ardından 4, 5 ve 6. adımları yeniden çalıştırın.", flush=True)
+        print(f"⚠ Hakem: {k['yapilamadi'] + k['denenmedi']} dilim yapılamadı ({ayrinti}).\n"
+              "   NE YAPMALI: 3c. Hakem modelini tekrar çalıştırın; yalnız yapılamayanlar denenir.\n"
+              "   Ardından 4, 5 ve 6. adımları yeniden çalıştırın.", flush=True)
         return
-    print(f"\n⚠ {toplam} istekten {n} tanesi yapılamadı ({ayrinti}).\n"
-          "   NE YAPMALI: Aynı adımı (3b. Yapay zekâ analizi) tekrar çalıştırın; yalnız yapılamayanlar\n"
-          "   yeniden denenir, tamamlananlar atlanır. Kota hatasıysa sınır sıfırlanınca (çoğu zaman\n"
-          "   ertesi gün) çalıştırın. Ardından 3c. Hakem modeli ve sonraki adımları (4, 5, 6) da\n"
-          "   yeniden çalıştırın ki sonuçlar güncellensin.\n"
-          "   Gemma bazı görüntülerde 500'ü kalıcı verir; tekrar denemede yine düşenlere hakem\n"
-          "   model bakar (3c), yani bu dilimler denetimsiz kalmaz.", flush=True)
+    if eksik_sayisi(k):
+        print(f"⛔ İlk model tamamlanmadı: {k['denenmedi']} dilim hiç denenmedi, {k['kota']} dilim "
+              "kota / hız sınırı yüzünden yapılamadı.\n"
+              "   NE YAPMALI: 3b. Yapay zekâ analizini tekrar çalıştırın (günlük kota bittiyse ertesi\n"
+              "   gün); yalnız eksikler denenir. İlk model tamamlanmadan hakem (3c)\n"
+              "   başlamaz.", flush=True)
+        return
+    print(f"⚠ {k['yapilamadi']} dilim {tekrar_tur + 1} denemede de yapılamadı ({ayrinti}).\n"
+          "   Bunlara hakem model bakar (3c), denetimsiz kalmaz. Sıradaki aşama: 3c. Hakem modeli.\n"
+          "   İsterseniz önce 3b'yi bir kez daha çalıştırıp ilk modele bir şans daha verebilirsiniz.",
+          flush=True)
 
 
 # ------------------------------------------------------------------ TOPLU İSTEK (BATCH)
@@ -1025,6 +1143,27 @@ def gemini_dene():
           "AI Studio > Rate limits sayfasında model başına RPD (günlük istek) yazar.")
 
 
+def ilk_model_tamam_mi(a, ornekler, cikti, hakem_ad):
+    """Hakemden önce: ilk modellerin her dilimi denenmiş mi? Kota yüzünden ya da yarıda
+    kaldığı için eksik varsa hakem başlamaz (--zorla ile geçilebilir)."""
+    modeller = [m.strip() for m in a.modeller.split(",") if m.strip()]
+    adlar = [istemci_adi(m, a) for m in modeller]
+    eksik = False
+    print("🔎 Hakemden önce ilk modelin kapsamı kontrol ediliyor...")
+    for ad in adlar:
+        if ad == hakem_ad:
+            continue
+        k = kapsam(ornekler, cikti, ad, a.dilim)
+        print(f"   {ad}: {kapsam_satiri(k)}")
+        eksik = eksik or bool(eksik_sayisi(k))
+    if eksik and not a.zorla:
+        print("\n⛔ İlk model tamamlanmadan hakem başlamaz: hiç denenmemiş ya da kota yüzünden\n"
+              "   yapılamamış dilimler var. NE YAPMALI: önce 3b. Yapay zekâ analizini çalıştırıp\n"
+              "   tamamlayın (yalnız eksikler denenir), sonra 3c'yi çalıştırın.", flush=True)
+        return False
+    return True
+
+
 def main():
     p = argparse.ArgumentParser(description="Görsel denetim - yapay zeka analizi")
     p.add_argument("--ornekler", default="denetim_cikti/ornekler.csv")
@@ -1062,6 +1201,10 @@ def main():
                    help="Hakeme yalnızca ana modelin hiç bakamadığı dilimleri gönder")
     p.add_argument("--hakem", help="Hakem modeli (ör. claude): yalnızca diğer modellerin "
                    "anlaşamadığı veya 'high' önem verdiği dilimlere sorulur")
+    p.add_argument("--tekrar-tur", type=int, default=2,
+                   help="Yapılamayan istekler için aynı çalıştırmada kaç yeniden deneme turu (vars. 2)")
+    p.add_argument("--zorla", action="store_true",
+                   help="Hakemi, ilk model tamamlanmamış olsa da çalıştır")
     p.add_argument("--tahmin", action="store_true", help="Sadece maliyet/süre tahmini")
     p.add_argument("--gemini-listele", action="store_true", help="Gemini modellerini listele")
     p.add_argument("--gemini-dene", action="store_true",
@@ -1091,6 +1234,8 @@ def main():
         ornekler = ornekleri_oku(a.ornekler, a.limit, a.klasor)
         if a.hakem:
             hakem = istemci_olustur(a.hakem, a)
+            if not a.tahmin and not ilk_model_tamam_mi(a, ornekler, cikti, hakem.ad):
+                sys.exit(3)
             filtre = hakem_dilimleri(cikti, hakem.ad, a.hakem_ornek, a.hakem_grup,
                                      a.sadece_bakilamayan)
             print(f"⚖️  Hakem {hakem.ad}: {len(filtre)} dilim anlaşmazlık veya yüksek önem içeriyor")
@@ -1103,14 +1248,24 @@ def main():
                       + ("; toplu/Batch fiyatı" if a.toplu else "") + ")")
             if a.tahmin:
                 return
-            calistir(a, ornekler, cikti, [hakem], filtre)
+            turlarla_calistir(a, ornekler, cikti, [hakem], filtre)
+            k = kapsam(ornekler, cikti, hakem.ad, a.dilim, filtre)
+            kapsam_yaz(cikti, "hakem_bakilamayan" if a.sadece_bakilamayan else "hakem", [k])
+            yapilamayan_ozeti(k, a.tekrar_tur, hakem=True)
         else:
             if a.tahmin:
                 tahmin(a, ornekler)
                 return
             istemciler = [istemci_olustur(m.strip(), a)
                           for m in a.modeller.split(",") if m.strip()]
-            calistir(a, ornekler, cikti, istemciler)
+            turlarla_calistir(a, ornekler, cikti, istemciler)
+            kayitlar = [kapsam(ornekler, cikti, ist.ad, a.dilim) for ist in istemciler]
+            kapsam_yaz(cikti, "ilk_model", kayitlar)
+            for k in kayitlar:
+                yapilamayan_ozeti(k, a.tekrar_tur)
+            if any(eksik_sayisi(k) for k in kayitlar):
+                birlestir(cikti)
+                sys.exit(3)   # hat burada durur: ilk model bitmeden hakeme geçilmez
     birlestir(cikti)
     print(f"\n💾 Çıktılar: {cikti.resolve()}")
 

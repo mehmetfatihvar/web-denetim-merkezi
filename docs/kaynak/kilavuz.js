@@ -350,9 +350,11 @@ tablo(["#", "Aşama", "Neden bu sırada?"], [
   ["3", "Tüm site testi", "Bütün sayfalar test edilir, ekran görüntüleri alınır. Görsel ve yapay zekâ denetimi bu görüntüleri kullanır."],
   ["4", "Denetimler", "Belge, kırık link ve şablon bazlı görsel kusur denetimi."],
   ["5", "Doğrulama", "Kırık görünen sayfalar doğrudan açılarak ve butonlara tıklanarak teyit edilir."],
-  ["6", "Yapay zekâ görsel denetimi", "Kodla ölçülemeyen görsel hatalar (üst üste binme, eksik veri, bozuk karakter …) için."],
-  ["7", "Doğrula ve düzelt", "Bulgular canlı sitede doğrulanır; taşma için CSS düzeltme önerisi üretilir."],
-  ["8", "Teslim paketi", "Bütün çıktılar tek klasörde toplanır."],
+  ["6", "Yapay zekâ: hazırlık", "Görüntüler kodla taranır, her şablondan temsilciler seçilip yeniden çekilir."],
+  ["7", "Yapay zekâ: ilk model", "Temsilcilerin her dilimi ilk modele (Gemma) sorulur. Satırda kapsam görünür (ör. 3990/4084 dilim, 94 yapılamadı). Hiç denenmemiş ya da kota yüzünden kalan dilim varsa aşama tamam sayılmaz."],
+  ["8", "Yapay zekâ: hakem ve rapor", "Şüpheli dilimler ve ilk modelin bakamadığı dilimler hakeme gider; isabet, metin kontrolü ve son rapor üretilir. İlk model tamamlanmadan başlamaz."],
+  ["9", "Doğrula ve düzelt", "Bulgular canlı sitede doğrulanır; taşma için CSS düzeltme önerisi üretilir."],
+  ["10", "Teslim paketi", "Bütün çıktılar tek klasörde toplanır."],
 ], [0.3, 1.6, 4]);
 
 H2("5.2 Hatlar");
@@ -368,7 +370,8 @@ madde([
   "**Durdur** ile ya da program kapanınca yarıda kalan adımı **yeniden çalıştırmanız yeterlidir**: test, keşif, yapay zekâ analizi ve Bologna kaldığı yerden devam eder. Yapılmış sayfalar atlanır.",
   "Tüm site testinde **Tam testi sıfırdan başlat** (Ayarlar) açıksa önceki sonuçlar silinip baştan başlanır; normalde kapalı tutun.",
   "Ücretsiz Gemini kotası günlük dolarsa yapay zekâ analizi durur; ertesi gün aynı adımı çalıştırın.",
-  "**Hata alan istekler de yeniden denenir.** Yapay zekâ analizi yalnız başarılı cevapları \"yapıldı\" sayar; sunucu hatası (ör. Gemma 500), kota ya da bağlantı hatası alan istekler aynı adım tekrar çalıştırıldığında yeniden gönderilir. Analiz bitince kayıtta (ve **Hatalar ve uyarılar** sekmesinde) \"⚠ N istekten M tanesi yapılamadı\" uyarısı ve ne yapılacağı yazar.",
+  "**Hata alan istekler de yeniden denenir.** Yapay zekâ analizi yalnız başarılı cevapları \"yapıldı\" sayar. Sunucu hatası (ör. Gemma 500), zaman aşımı ya da kota hatası alan istekler aynı çalıştırmada otomatik olarak **2 tur daha** denenir (kayıtta \"Yeniden deneme turu 1/2\"); adım sonradan tekrar çalıştırılırsa yine yalnız yapılamayanlar gönderilir.",
+  "**İlk model ve hakem ayrı aşamalardır.** 3b bitince kayda kapsam yazılır: \"İlk model (gemini:gemma-4-31b-it): 3990/4084 dilim tamam, 94 yapılamadı\". Hiç denenmemiş (yarıda kalmış) ya da kota yüzünden yapılamamış dilim varsa 3b **başarısız** biter (\"İlk model tamamlanmadı\") ve hat hakeme geçmez; 3b'yi tekrar çalıştırın. 3c de başlamadan aynı kontrolü yapar. 3 denemede de yapılamayan dilimler (Gemma 500, zaman aşımı) ise hakeme gider; denetimsiz kalmaz.",
   "**Çalıştığını nasıl anlarım?** Kayda yalnız hata alan istekler tek tek yazılır; başarılı cevaplar sessizce `sonuclar.jsonl` dosyasına kaydedilir. Her 20 istekte bir `[340/3792] ✓ 270 başarılı  ✗ 70 yapılamadı  ~906 dk kaldı` gibi bir ilerleme satırı çıkar. Gemma yavaş olduğu için iki satır arası 8–15 dakika sürebilir. Cevap vermeyen bir bağlantı 5 dakikada zaman aşımına uğrar ve yeniden denenir, yani istek asılı kalmaz. 30 dakikadan uzun süre yeni satır gelmezse (ör. bilgisayar uykuya geçtiyse) adımı durdurup yeniden başlatın; tamamlananlar atlanır.",
 ]);
 
@@ -537,7 +540,7 @@ H2("8.4 Kota, hız ve maliyet");
 madde([
   "**Dakikada istek sınırı** (varsayılan 8): ücretsiz Gemini katmanının dakikalık sınırına takılmamak için. Ücretli hesapta 0 (sınırsız) yapılabilir.",
   "Günlük kota dolarsa analiz o model için durur; ertesi gün aynı adım kaldığı yerden devam eder.",
-  "**Gemma \"gemma_500_kalici\" hatası:** Gemma bazı görüntülerde sunucu hatası (500) verir. Araç görüntüyü önce PNG, sonra JPEG olarak dener; ikisi de düşerse dilimi \"bakılamadı\" işaretleyip geçer ve **3c. Hakem modeli** bu dilimlere bakar. Daha çok dilimin ana modelden geçmesi için analiz bitince **3b**'yi bir kez daha çalıştırın (yalnız yapılamayanlar denenir); ardından **3c, 4, 5 ve 6**'yı yeniden çalıştırın.",
+  "**Gemma \"gemma_500_kalici\" hatası:** Gemma bazı görüntülerde sunucu hatası (500) verir. Araç görüntüyü önce PNG, sonra JPEG olarak dener; ikisi de düşerse dilimi \"bakılamadı\" işaretler. Bu dilimler aynı çalıştırmada 2 tur daha denenir; yine düşenlere **3c. Hakem modeli** bakar. İsterseniz 3c'den önce **3b**'yi bir kez daha çalıştırıp ilk modele bir şans daha verebilirsiniz.",
   "**3a. Maliyet/süre tahmini** API çağırmadan istek sayısını ve Claude için tahmini maliyeti gösterir. Önce **Sayfa sınırı (deneme)** ile küçük bir tur yapmanız önerilir.",
   "Claude kullanıyorsanız **Claude toplu istek (Batch)** maliyeti yarıya indirir; sonuç genelde bir saat içinde gelir.",
 ]);
@@ -623,6 +626,7 @@ tablo(["Belirti", "Olası neden", "Çözüm"], [
   ["Yapay zekâ: \"model bu hesapta kullanılamıyor (404)\"", "Model adı yanlış ya da hesapta yok.", "**Yapay zekâ sağlayıcılarını dene** ile kullanılabilir modelleri görün, ayarı düzeltin."],
   ["Yapay zekâ: \"günlük kota doldu\"", "Ücretsiz katman kotası.", "Ertesi gün aynı adımı çalıştırın; kaldığı yerden devam eder."],
   ["Yapay zekâ analizi uzun süre ilerlemiyor gibi görünüyor", "Ekrana yalnız hatalar yazılır; Gemma yavaştır.", "`[i/N] ✓ … ✗ …` satırındaki sayaç ilerliyorsa çalışıyordur (satır arası 8–15 dk normal). 30 dakikadan uzun süre yeni satır yoksa adımı durdurup yeniden başlatın; tamamlananlar atlanır. Bilgisayarın uykuya geçmediğinden emin olun."],
+  ["Yapay zekâ: 3b \"İlk model tamamlanmadı\" ile başarısız bitti ya da 3c \"İlk model tamamlanmadan hakem başlamaz\" diyor", "Analiz yarıda kalmış ya da kota dolmuş; bazı dilimler ilk modele hiç sorulmamış.", "**3b**'yi tekrar çalıştırın (günlük kota bittiyse ertesi gün): yalnız eksikler denenir. Ana sayfadaki \"Yapay zekâ: ilk model\" satırı tamamlanınca 3c'yi çalıştırın."],
   ["Yapay zekâ: çok sayıda \"gemma_500_kalici\" ya da sonda \"N istek yapılamadı\"", "Gemma sunucu hatası, kota ya da bağlantı sorunu.", "Adım bitince **3b**'yi tekrar çalıştırın: yalnız yapılamayanlar denenir. Sonra **3c, 4, 5, 6**'yı yeniden çalıştırın. Yine düşen Gemma dilimlerine hakem bakar."],
   ["Yapay zekâ adımı \"ornekler.csv yok\" diyor", "Önceki adımlar çalışmamış.", "Yapay zekâ hattını baştan (1. adımdan) çalıştırın."],
   ["Canlı doğrulama \"results.jsonl yok\" diyor", "Doğrulama çekimi yapılmamış ya da yarıda kalmış.", "7. adımı yeniden çalıştırın."],

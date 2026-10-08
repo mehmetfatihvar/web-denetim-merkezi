@@ -185,6 +185,37 @@ def _var(adim_id: str, ayar: dict) -> bool:
     return cikti_durumu(ADIM_SOZLUK[adim_id], ayar)[0]
 
 
+def kapsam_oku(k) -> dict:
+    """analiz.py'nin yazdığı kapsam.json (ilk model / hakem kaç dilime baktı)."""
+    return onbellekli(k.ai_sonuc / "kapsam.json", _json_oku)
+
+
+def _json_oku(yol) -> dict:
+    try:
+        veri = json.loads(Path(yol).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return veri if isinstance(veri, dict) else {}
+
+
+def _kapsam_durumu(k, anahtar):
+    """(tamam mı, ayrıntı). Hakemde kayıt yoksa tamam=None (rapor varlığına bakılır)."""
+    kayit = kapsam_oku(k).get(anahtar)
+    if not kayit or not kayit.get("modeller"):
+        return (False if anahtar == "ilk_model" else None), ""
+    tamam, parca = True, []
+    for m in kayit["modeller"]:
+        eksik = m["denenmedi"] + m.get("kota", 0)
+        tamam = tamam and (not eksik if anahtar == "ilk_model" else not (eksik or m["yapilamadi"]))
+        metin = f"{m['tamam']}/{m['beklenen']} dilim"
+        if m["yapilamadi"]:
+            metin += f", {m['yapilamadi']} yapılamadı"
+        if m["denenmedi"]:
+            metin += f", {m['denenmedi']} denenmedi"
+        parca.append(metin)
+    return tamam, "; ".join(parca)
+
+
 def yol_haritasi(ayar: dict):
     """Önerilen iş sırası: (başlık, açıklama, tamam mı, ayrıntı, çalıştırılacak adımlar)."""
     k = Klasorler(ayar)
@@ -200,9 +231,14 @@ def yol_haritasi(ayar: dict):
          ["belge", "link", "kumeleme", "gorsel"], None),
         ("Doğrulama", "Kırık sayfalar doğrudan erişim ve tıklamayla teyit edilir.",
          ["rota", "tiklama"], None),
-        ("Yapay zekâ görsel denetimi", "Ekran görüntüleri modellere sorulur, son rapor üretilir.",
-         ["ai_tarama", "ai_temsilci", "ai_yeniden", "ai_analiz", "ai_hakem", "ai_isabet",
-          "ai_metin", "ai_rapor"], lambda: (_var("ai_rapor", ayar), "")),
+        ("Yapay zekâ: hazırlık", "Görüntüler kodla taranır, şablon temsilcileri seçilip yeniden çekilir.",
+         ["ai_tarama", "ai_temsilci", "ai_yeniden"], None),
+        ("Yapay zekâ: ilk model", "Temsilci görüntülerin her dilimi ilk modele sorulur.",
+         ["ai_analiz"], lambda: _kapsam_durumu(k, "ilk_model")),
+        ("Yapay zekâ: hakem ve rapor", "Şüpheli ve ilk modelin bakamadığı dilimler hakeme gider, "
+         "son rapor üretilir.", ["ai_hakem", "ai_isabet", "ai_metin", "ai_rapor"],
+         lambda: (_var("ai_rapor", ayar) and _kapsam_durumu(k, "hakem")[0] is not False,
+                  _kapsam_durumu(k, "hakem")[1])),
         ("Doğrula ve düzelt", "Bulgular canlı sitede doğrulanır, taşma için CSS önerisi üretilir.",
          ["gd_dogrulama", "gd_oto"], None),
         ("Teslim paketi", "Bütün rapor ve veriler tek klasörde toplanır.", ["teslim"],
