@@ -1,0 +1,26 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="ortak.css">
+<style>
+.h{margin:0 auto 6px;border-radius:8px;padding:9px 14px;color:#fff;font-size:14px;line-height:1.4;text-align:center}
+.h b{font-size:16px}.h i{font-style:normal;opacity:.9;font-size:12.5px;display:block}
+.yan{display:flex;gap:14px;margin-top:10px}.yan .k{font-size:13px}
+.okk{text-align:center;color:#1F4E79;font-size:15px;line-height:1;margin:0 0 5px}
+</style></head><body>
+<div class="h" style="width:100%;background:#1F4E79"><b>~34.000 ekran görüntüsü</b> (17.394 sayfa × masaüstü + mobil)<i>1. Kodla piksel taraması: HER görüntü ölçülür — taşma, boş sayfa, çok kısa/uzun, eksik eş, aynı görünüm (yapay zekâ yok)</i></div>
+<div class="okk">▼</div>
+<div class="h" style="width:88%;background:#2B6496"><b>Şablon grupları → görsel kümeler</b><i>URL kalıbı (sayfa türü) + görüntü benzerliği (dHash, Hamming mesafesi)</i></div>
+<div class="okk">▼</div>
+<div class="h" style="width:74%;background:#3A78AE"><b>Temsilci görüntüler</b> (küme başına 3)<i>ornekler.csv → URL'leri bulunur, sayfa sona kadar kaydırılarak yeniden çekilir; 404/403 dönenler ayıklanır</i></div>
+<div class="okk">▼</div>
+<div class="h" style="width:60%;background:#4C8BC2"><b>Dilimler</b> (görüntü başına en fazla 3)<i>ilk dilimler + son dilim (footer); masaüstü 1024 px, mobil 375 px genişlik · ÖİDB: 4.084 istek</i></div>
+<div class="okk">▼</div>
+<div class="h" style="width:48%;background:#6A3D9A"><b>İlk model</b> (Gemma)<i>aynı İngilizce talimat + JSON şeması · 3 deneme · kapsam.json</i></div>
+<div class="okk">▼ yalnız ilk model tamamsa</div>
+<div class="h" style="width:38%;background:#7E57AE"><b>Hakem</b> (Gemini Flash-Lite)<i>anlaşmazlık, "high" önem, bakılamayan dilim</i></div>
+<div class="okk">▼</div>
+<div class="h" style="width:30%;background:#2E7D32"><b>KESİN</b> = 2+ model aynı dilimde aynı tür<i>tek model: İNCELE</i></div>
+<div class="yan">
+<div class="k"><b>Neden huni?</b>17 bin sayfanın hepsini 3 dilimle sormak ~50 bin istek, ücretsiz kotada haftalar demektir. Aynı şablondaki sayfalar aynı tasarım hatasını taşıdığı için temsilci yeterlidir.</div>
+<div class="k"><b>Ne kaçabilir?</b>Yalnız bir sayfanın içeriğinden doğan görsel hata, o sayfa temsilci değilse yapay zekâya gitmez. Kod kontrolleri, link ve belge denetimi ise bütün sayfaları kapsar.</div>
+<div class="k"><b>Güvenilirlik</b>İsabet ölçülür (hakem onayı, taşmada piksel ölçümü); bulgular canlı sitede yeniden ölçülür (DOĞRULANDI/GÖRÜLMEDİ) ve elle etiketlenebilir.</div>
+</div>
+</body></html>

@@ -1,0 +1,38 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="ortak.css"></head><body>
+<div class="katman"><div class="ad">1. Kullanıcı katmanı</div><div class="satir">
+<div class="k"><b>Masaüstü arayüz</b>merkez/arayuz.py, tema.py<br><i>menü, adım kartları, ilerleme paneli, kayıt, raporlar</i></div>
+<div class="k"><b>Komut satırı</b>web_denetim.py<br><i>--liste, --goster, --calistir, --durum</i></div>
+<div class="k"><b>Başlatıcılar</b>BASLAT.bat, KURULUM.bat, baslat.sh, kurulum.sh<br><i>sanal ortam (.venv), paketler, Chromium</i></div>
+</div></div>
+<div class="ok">▼</div>
+<div class="katman"><div class="ad">2. Çekirdek (merkez/) — arayüzden bağımsız, testlerle sınanır</div><div class="satir">
+<div class="k"><b>Adım tanımları</b>adimlar.py<br><i>39 adım: ayar → komut listesi, çıktı dosyaları</i></div>
+<div class="k"><b>Çalıştırma motoru</b>calistirici.py<br><i>alt süreç, canlı çıktı, durdurma, kayıt</i></div>
+<div class="k"><b>İzleme</b>izleme.py<br><i>ilerleme, kalan süre, hata/uyarı tanıma</i></div>
+<div class="k"><b>Ayarlar</b>ayarlar.py, yollar.py<br><i>site profilleri, klasörler</i></div>
+</div><div class="satir" style="margin-top:10px">
+<div class="k"><b>Durum ve özet</b>durum.py<br><i>yol haritası, kutucuklar, kapsam</i></div>
+<div class="k"><b>Raporlar</b>adim_raporu.py, denetim_raporu.py<br><i>her adımın raporu; link/belge HTML + Excel</i></div>
+<div class="k"><b>Teslim</b>teslim.py<br><i>TESLIM klasörü + içindekiler</i></div>
+<div class="k"><b>Ortam ve sağlayıcılar</b>ortam.py, saglayicilar.py<br><i>kurulum kontrolü, API anahtar testi</i></div>
+</div></div>
+<div class="ok">▼ <span style="font-size:13px">komut + argümanlar (araçlar değiştirilmeden çağrılır)</span></div>
+<div class="katman yesil"><div class="ad">3. Araçlar (tools/, bologna-scraper/) — her biri tek başına da çalışır</div><div class="satir">
+<div class="k"><b>Keşif</b>kesif.py</div>
+<div class="k"><b>Kanıtlı test</b>tester_v3_evidence.py<br><i>test, link, belge, görsel kusur</i></div>
+<div class="k"><b>Doğrulama</b>verify_routes.py, verify_clicks.py</div>
+<div class="k"><b>Şablon / yerel AI</b>cluster_templates.py, visual_ai_review.py</div>
+</div><div class="satir" style="margin-top:10px">
+<div class="k"><b>Görsel denetim hattı</b>visual_audit/: tarama, temsilci_urls, analiz, isabet, metin_kontrol, rapor</div>
+<div class="k"><b>Doğrula ve düzelt</b>visual_audit/: dogrulama, etiketle, css_deneme, oto_duzelt</div>
+<div class="k"><b>Bologna</b>bologna-scraper/ (Go)<br><i>OİBS → PostgreSQL</i></div>
+</div></div>
+<div class="ok">▼</div>
+<div class="satir">
+<div class="katman gri" style="flex:1"><div class="ad">4. Dış dünya</div><div class="satir">
+<div class="k"><b>Denetlenen site</b><i>HTTP istekleri</i></div><div class="k"><b>Chromium</b><i>Playwright</i></div>
+<div class="k"><b>Yapay zekâ</b><i>Gemini/Gemma, Claude, OpenAI uyumlu, Ollama</i></div><div class="k"><b>PostgreSQL</b><i>Docker ya da yerel</i></div></div></div>
+<div class="katman turuncu" style="flex:0 0 330px"><div class="ad">5. Çıktılar: ciktilar/&lt;profil&gt;/</div>
+<div class="k"><i>JSON/JSONL ham veri, CSV (Excel uyumlu), HTML raporlar, ekran görüntüleri, adım raporları, çalışma kayıtları, TESLIM paketi</i></div></div>
+</div>
+</body></html>

@@ -16,7 +16,11 @@ gelir.
 
 > 📘 **Ayrıntılı kullanım kılavuzu:** [docs/KULLANIM_KILAVUZU.pdf](docs/KULLANIM_KILAVUZU.pdf) ·
 > [Word](docs/KULLANIM_KILAVUZU.docx). Kurulum, arayüz, bütün adımlar, raporların nasıl okunacağı,
-> ayarlar ve sorun giderme; gerçek ekran görüntüleriyle (42 sayfa).
+> ayarlar ve sorun giderme; gerçek ekran görüntüleriyle.
+>
+> 🧭 **Teknik doküman:** [docs/TEKNIK_DOKUMAN.pdf](docs/TEKNIK_DOKUMAN.pdf) ·
+> [Word](docs/TEKNIK_DOKUMAN.docx). Programın amacı, mimarisi, süreçleri, hangi sonucun hangi
+> süreçten geldiği ve kod haritası.
 
 ---
 

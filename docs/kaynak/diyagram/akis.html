@@ -1,0 +1,43 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="ortak.css">
+<style>
+.kolon{display:flex;gap:12px}.kolon>div{flex:1}
+.a{border:2px solid #1F4E79;border-radius:9px;background:#F4F8FC;padding:8px 10px;margin-bottom:6px;font-size:13px;line-height:1.35}
+.a b{color:#1F4E79;font-size:14px}.a .d{color:#8a5200;font-family:"DejaVu Sans Mono",monospace;font-size:11.5px;display:block;margin-top:3px}
+.y{border-color:#2E7D32;background:#F1F8F2}.y b{color:#2E7D32}
+.t{border-color:#B26A00;background:#FDF6EA}.t b{color:#8a5200}
+.m{border-color:#6A3D9A;background:#F6F1FB}.m b{color:#6A3D9A}
+.okk{text-align:center;color:#1F4E79;font-size:16px;line-height:1;margin:-1px 0 5px}
+.bas{font-weight:bold;font-size:14px;color:#45515c;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+</style></head><body>
+<div class="a" style="text-align:center"><b>Site profili</b> (adres, keşif kuralları, test ayarları) → <b>1. Site keşfi</b> (kesif.py) <span class="d">kesif/site_haritasi.json · url_list (ÖİDB: 17.394 sayfa)</span></div>
+<div class="okk">▼</div>
+<div class="a" style="text-align:center"><b>2. Kanıtlı test</b> (tester_v3_evidence.py, Chromium, 4 sekme, parça parça) — HTTP, güvenlik başlıkları, Türkçe karakter, erişilebilirlik, mobil, JS hataları
+<span class="d">test_output/results.jsonl · screenshots/ (masaüstü + mobil, ~34 bin PNG) · report.html/xlsx · summary.txt</span></div>
+<div class="okk">▼ &nbsp; ▼ &nbsp; ▼</div>
+<div class="kolon">
+<div><div class="bas">Denetimler ve doğrulama</div>
+<div class="a"><b>3a. Kırık link</b> — sayfalardaki bütün bağlantılar toplanır, tekilleştirilir, HTTP ile denenir<span class="d">broken_links.csv → kirik_link_raporu.html</span></div>
+<div class="a"><b>3b. Belge</b> — PDF/Word/Excel bağlantıları, ağ yanıtları, sızdırılmış yerel yol<span class="d">documents_audit.csv → belge_raporu.html</span></div>
+<div class="a"><b>3c. Şablon + görsel kusur</b> — URL düzen imzası, temsilcide DOM ölçümü<span class="d">template_clusters.json · gorsel_rapor.html</span></div>
+<div class="okk">▼</div>
+<div class="a y"><b>4. Teyit</b> — doğrudan erişim (verify_routes) ve gerçek tıklama (verify_clicks)<span class="d">routes_/clicks_verification.csv → rapordaki Teyit sütunu</span></div>
+</div>
+<div><div class="bas">Yapay zekâ görsel denetimi</div>
+<div class="a m"><b>5.1 Kodla piksel taraması</b> — tüm görüntüler: taşma, boş, kısa/uzun, eksik eş, aynı görünüm; şablon + görsel küme; temsilci<span class="d">tarama.csv · ornekler.csv</span></div>
+<div class="a m"><b>5.2 Temsilci URL + kaydırarak yeniden çekim</b><span class="d">temsilci_urls.json · yeniden_cekim/</span></div>
+<div class="a m"><b>5.3 İlk model</b> — dilimler, JSON şeması, 3 deneme, kapsam kontrolü<span class="d">ai_v2/sonuclar.jsonl · kapsam.json</span></div>
+<div class="a m"><b>5.4 Hakem</b> — anlaşmazlık, yüksek önem, bakılamayan dilimler<span class="d">oylama.csv (KESİN / İNCELE)</span></div>
+<div class="a m"><b>5.5 İsabet · metin kodlama · son rapor</b><span class="d">isabet.txt · metin_kontrol.csv · rapor/rapor.html</span></div>
+</div>
+<div><div class="bas">Doğrula ve düzelt</div>
+<div class="a t"><b>6.1 Canlı doğrulama</b> — bulgulu sayfalar yeniden açılır, DOM'da ölçülür<span class="d">sonuc.csv (DOĞRULANDI / GÖRÜLMEDİ / ELLE / AÇILAMADI) · kok_neden.csv</span></div>
+<div class="a t"><b>6.2 Elle etiketleme</b> — 1 Gerçek / 2 Yanlış / 3 Emin değilim<span class="d">etiketle.html → etiket_ozet.txt</span></div>
+<div class="a t"><b>6.3 Otomatik taşma düzeltme</b> — öğe türüne göre CSS, yeniden ölçüm, güçlendirme<span class="d">oneri.css · karsilastir.html</span></div>
+<div class="a t"><b>6.4 CSS denemesi</b> — düzelen / kalan / yeni bozulan<span class="d">css_ozet.txt</span></div>
+<div class="bas" style="margin-top:12px">Bağımsız modül</div>
+<div class="a"><b>Bologna</b> — OİBS Bologna Bilgi Paketi → PostgreSQL (Go)</div>
+</div></div>
+<div class="okk">▼</div>
+<div class="a y" style="text-align:center"><b>7. Teslim paketi</b> (teslim.py) — bütün raporlar ve veriler anlaşılır adlarla tek klasörde <span class="d">TESLIM/index.html · raporlar/ · veri/</span></div>
+<div class="not" style="text-align:center">Her adımın sonunda ayrıca bir adım raporu yazılır: adim_raporlari/&lt;tarih&gt;_&lt;adım&gt;.html</div>
+</body></html>
