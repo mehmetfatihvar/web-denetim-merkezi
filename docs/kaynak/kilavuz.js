@@ -490,6 +490,7 @@ sirali([
   "Klavyeyle **1** Gerçek, **2** Yanlış, **3** Emin değilim; **←** **→** ile gezilir. Etiketler tarayıcıda saklanır, sayfa kapanıp açılsa da kaybolmaz.",
   "Bitince **CSV indir** ile `etiketler.csv` kaydedilir (varsayılan: İndirilenler klasörü; başka yere kaydettiyseniz Ayarlar'da yolunu verin).",
   "**8b. Etiketleri işle** tür başına elle ölçülmüş isabeti (`etiket_ozet.txt`) ve her bulguya insan etiketini (`sonuc_etiketli.csv`) üretir.",
+  "8a ile 8b'yi art arda çalıştırmayın: 8b, etiketleme sayfası oluşturulduktan **sonra** indirilmiş bir etiket dosyası bulamazsa \"8b bekliyor\" deyip durur. Tarayıcı dosyayı `etiketler (1).csv` gibi bir adla kaydettiyse en yenisi kendiliğinden kullanılır.",
 ]);
 H2("7.8 CSS düzeltmesi (9. ve 10. aşamalar)");
 madde([

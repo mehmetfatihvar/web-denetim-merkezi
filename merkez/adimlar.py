@@ -292,6 +292,36 @@ def etiket_csv(ayar) -> Path:
         Path.home() / "Downloads" / "etiketler.csv"
 
 
+def guncel_etiket_csv(ayar) -> Optional[Path]:
+    """8a'dan (etiketle.html) SONRA indirilmiş etiket dosyası; yoksa None.
+    Tarayıcı aynı adda dosya varsa 'etiketler (1).csv' diye kaydeder: klasördeki en yenisi alınır."""
+    sayfa = Klasorler(ayar).etiket / "etiketle.html"
+    esik = sayfa.stat().st_mtime if sayfa.exists() else 0
+    hedef = etiket_csv(ayar)
+    adaylar = [hedef] + sorted(hedef.parent.glob(f"{hedef.stem}*{hedef.suffix}"))
+    adaylar = [p for p in adaylar if p.is_file() and p.stat().st_mtime > esik]
+    return max(adaylar, key=lambda p: p.stat().st_mtime) if adaylar else None
+
+
+def _etiket_ozet(ayar):
+    """8b ancak etiketleme yapılıp CSV indirildikten sonra çalışır. 8a ile art arda
+    çalıştırılırsa (ya da eski bir etiketler.csv varsa) ne yapılacağını söyleyip durur."""
+    k = Klasorler(ayar)
+    csv_yolu = guncel_etiket_csv(ayar)
+    if csv_yolu is None:
+        def bekle(yaz):
+            yaz("\n⏸ 8b bekliyor: etiketleme sayfası oluşturulduktan (8a) sonra indirilmiş bir "
+                f"etiket dosyası yok.\n   Beklenen: {etiket_csv(ayar)}\n"
+                "   NE YAPMALI: 8a'nın kartında 'Çıktıyı aç' ile etiketle.html'i açın, bulguları 1 Gerçek /"
+                "\n   2 Yanlış / 3 Emin değilim ile işaretleyin, sayfadaki 'CSV indir' ile kaydedin; sonra"
+                "\n   8b'yi tek başına çalıştırın. (CSV'yi başka yere kaydettiyseniz yolunu Ayarlar'da girin.)\n")
+            return 2
+        return [Komut(fonksiyon=bekle, aciklama="Etiket dosyası kontrolü")]
+    return [_py(ayar, "etiketle.py", "ozet", "--etiketler", csv_yolu, "--sonuc",
+                k.dogrulama_cikti / "sonuc.csv", "--cikti", k.etiket, cwd=yollar.GORSEL_DENETIM,
+                aciklama=f"Etiketler: {csv_yolu.name}")]
+
+
 def _dogrulama(ayar):
     k = Klasorler(ayar)
     gd = yollar.GORSEL_DENETIM
@@ -515,11 +545,11 @@ def _adimlar() -> List[Adim]:
                             "--cikti", K(a).etiket, cwd=yollar.GORSEL_DENETIM)],
              lambda a: [K(a).etiket / "etiketle.html"]),
         Adim("gd_etiket_ozet", "duzeltme", "8b. Etiketleri işle",
-             "İndirilen etiketler.csv'den tür başına elle ölçülmüş isabeti ve otomatik doğrulamanın "
-             "isabetini hesaplar. Dosya yolu Ayarlar'dan değiştirilebilir (varsayılan: İndirilenler).",
-             lambda a: [_py(a, "etiketle.py", "ozet", "--etiketler", etiket_csv(a), "--sonuc",
-                            K(a).dogrulama_cikti / "sonuc.csv", "--cikti", K(a).etiket,
-                            cwd=yollar.GORSEL_DENETIM)],
+             "8a'dan sonra, etiketleme sayfasında işaretleyip 'CSV indir' ile kaydettiğiniz "
+             "etiketler.csv'den tür başına elle ölçülmüş isabeti ve otomatik doğrulamanın isabetini "
+             "hesaplar. 8a ile art arda değil, etiketlemeden sonra tek başına çalıştırın; dosya yoksa ya "
+             "da 8a'dan eskiyse bekler. Dosya yolu Ayarlar'dan değiştirilebilir (varsayılan: İndirilenler).",
+             _etiket_ozet,
              lambda a: [K(a).etiket / "etiket_ozet.txt", K(a).etiket / "sonuc_etiketli.csv"],
              sure="saniyeler"),
         Adim("gd_css", "duzeltme", "9. CSS düzeltme önerisini dene",

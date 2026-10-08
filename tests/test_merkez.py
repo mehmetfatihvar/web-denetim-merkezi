@@ -502,6 +502,34 @@ class ModelVarsayilanTestleri(unittest.TestCase):
 
 
 class AnaSayfaTestleri(GeciciKlasor):
+    def test_etiket_ozeti_etiketlemeden_once_calismaz(self):
+        """8a ile art arda çalışan 8b etiket dosyası yoksa ya da 8a'dan eskiyse bekler;
+        tarayıcının 'etiketler (1).csv' diye kaydettiği yeni dosyayı bulur."""
+        import os
+        from merkez.adimlar import ADIM
+        from merkez.ayarlar import Klasorler
+        indir = self.t / "indirilenler"
+        indir.mkdir()
+        ayar = dict(A.VARSAYILAN, cikti_koku=str(self.t / "cikti"),
+                    etiket_csv=str(indir / "etiketler.csv"))
+        eski = indir / "etiketler.csv"
+        eski.write_text("id;etiket\n", encoding="utf-8")
+        os.utime(eski, (1, 1))
+        sayfa = Klasorler(ayar).etiket / "etiketle.html"
+        sayfa.parent.mkdir(parents=True)
+        sayfa.write_text("x", encoding="utf-8")
+        komutlar = ADIM["gd_etiket_ozet"].komutlar(ayar)
+        self.assertEqual(len(komutlar), 1)
+        yazilan = []
+        self.assertNotEqual(komutlar[0].fonksiyon(yazilan.append), 0)
+        self.assertIn("8b bekliyor", "".join(yazilan))
+        yeni = indir / "etiketler (1).csv"
+        yeni.write_text("id;etiket\n", encoding="utf-8")
+        os.utime(yeni, (sayfa.stat().st_mtime + 5,) * 2)
+        komut = ADIM["gd_etiket_ozet"].komutlar(ayar)[0]
+        self.assertIsNone(komut.fonksiyon)
+        self.assertIn(str(yeni), [str(x) for x in komut.argv])
+
     def test_yol_haritasi_ve_kutucuklar(self):
         from merkez.durum import kutucuklar, yol_haritasi
         harita = self.t / "h.json"
