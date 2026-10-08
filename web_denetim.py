@@ -36,6 +36,8 @@ def baslatma_hatasi():
     except OSError:
         pass
     sys.stderr.write(metin)
+    if len(sys.argv) > 1:      # komut satırı kullanımında pencere açılmaz
+        return
     try:
         import tkinter as tk
         from tkinter import messagebox
@@ -149,7 +151,7 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except (SystemExit, KeyboardInterrupt):
+    except (SystemExit, KeyboardInterrupt, BrokenPipeError):
         raise
     except Exception:
         baslatma_hatasi()
