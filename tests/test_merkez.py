@@ -562,6 +562,9 @@ class AnaSayfaTestleri(GeciciKlasor):
         ilk, hakem = satirlar["Yapay zekâ: ilk model"], satirlar["Yapay zekâ: hakem ve rapor"]
         self.assertEqual(ilk[4], ["ai_analiz"])
         self.assertEqual(hakem[4][0], "ai_hakem")
+        # 8a ve 8b ana sayfada ayrı satır ve düğme (8b etiketlemeden sonra çalışır)
+        self.assertEqual(satirlar["Elle etiketleme: sayfa"][4], ["gd_etiket"])
+        self.assertEqual(satirlar["Elle etiketleme: sonuç"][4], ["gd_etiket_ozet"])
         self.assertFalse(ilk[2])
         ai = Klasorler(ayar).ai_sonuc
         ai.mkdir(parents=True)

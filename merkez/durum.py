@@ -239,8 +239,13 @@ def yol_haritasi(ayar: dict):
          "son rapor üretilir.", ["ai_hakem", "ai_isabet", "ai_metin", "ai_rapor"],
          lambda: (_var("ai_rapor", ayar) and _kapsam_durumu(k, "hakem")[0] is not False,
                   _kapsam_durumu(k, "hakem")[1])),
-        ("Doğrula ve düzelt", "Bulgular canlı sitede doğrulanır, taşma için CSS önerisi üretilir.",
-         ["gd_dogrulama", "gd_oto"], None),
+        ("Canlı doğrulama", "Bulgular canlı sitede yeniden ölçülür: gerçek mi, yanlış alarm mı? (7)",
+         ["gd_dogrulama"], None),
+        ("Elle etiketleme: sayfa", "Sayfayı açıp bulguları 1/2/3 ile işaretleyin, 'CSV indir'e basın. (8a)", ["gd_etiket"], None),
+        ("Elle etiketleme: sonuç", "İndirilen etiketlerden isabet hesaplanır; etiketlemeden sonra "
+         "çalıştırın. (8b)", ["gd_etiket_ozet"], None),
+        ("Taşma düzeltme", "Taşma için CSS önerisi üretilir ve canlı sayfada denenir. (10, 9)",
+         ["gd_oto", "gd_css"], None),
         ("Teslim paketi", "Bütün rapor ve veriler tek klasörde toplanır.", ["teslim"],
          lambda: (_var("teslim", ayar), "")),
     ]

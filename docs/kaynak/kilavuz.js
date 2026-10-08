@@ -353,8 +353,11 @@ tablo(["#", "Aşama", "Neden bu sırada?"], [
   ["6", "Yapay zekâ: hazırlık", "Görüntüler kodla taranır, her şablondan temsilciler seçilip yeniden çekilir."],
   ["7", "Yapay zekâ: ilk model", "Temsilcilerin her dilimi ilk modele (Gemma) sorulur. Satırda kapsam görünür (ör. 3990/4084 dilim, 94 yapılamadı). Hiç denenmemiş ya da kota yüzünden kalan dilim varsa aşama tamam sayılmaz."],
   ["8", "Yapay zekâ: hakem ve rapor", "Şüpheli dilimler ve ilk modelin bakamadığı dilimler hakeme gider; isabet, metin kontrolü ve son rapor üretilir. İlk model tamamlanmadan başlamaz."],
-  ["9", "Doğrula ve düzelt", "Bulgular canlı sitede doğrulanır; taşma için CSS düzeltme önerisi üretilir."],
-  ["10", "Teslim paketi", "Bütün çıktılar tek klasörde toplanır."],
+  ["9", "Canlı doğrulama", "Bulgular canlı sitede yeniden ölçülür: gerçek mi, yanlış alarm mı? (7. adım)"],
+  ["10", "Elle etiketleme: sayfa", "Etiketleme sayfası oluşturulur; açıp bulguları 1/2/3 ile işaretleyin, 'CSV indir'e basın (8a)."],
+  ["11", "Elle etiketleme: sonuç", "İndirilen etiketlerden isabet hesaplanır (8b). Etiketlemeden sonra ayrı çalıştırın."],
+  ["12", "Taşma düzeltme", "Taşma için CSS önerisi üretilir ve canlı sayfada denenir (10 ve 9. adımlar)."],
+  ["13", "Teslim paketi", "Bütün çıktılar tek klasörde toplanır."],
 ], [0.3, 1.6, 4]);
 
 H2("5.2 Hatlar");

@@ -143,7 +143,7 @@ H1("4. Uçtan uca süreç");
 H2("4.1 Süreç haritası");
 P("Aşağıdaki şekil verinin programdaki yolculuğunu gösterir. Her kutu bir adım ya da adım grubudur; altındaki kod yazısı ürettiği ana dosyadır. Okların yönü veri bağımlılığıdır: bir adım, yukarısındaki adımın çıktısını girdi olarak kullanır.");
 gorsel("teknik_akis.png", "Uçtan uca süreç: keşiften teslim paketine kadar adımlar ve ürettikleri dosyalar");
-P("Ana sayfadaki **yol haritası** bu sırayı izler: Site haritası → Deneme testi → Tüm site testi → Denetimler → Doğrulama → Yapay zekâ: hazırlık → Yapay zekâ: ilk model → Yapay zekâ: hakem ve rapor → Doğrula ve düzelt → Teslim paketi. Bologna bağımsızdır, herhangi bir zamanda çalıştırılabilir.");
+P("Ana sayfadaki **yol haritası** bu sırayı izler: Site haritası → Deneme testi → Tüm site testi → Denetimler → Doğrulama → Yapay zekâ: hazırlık → Yapay zekâ: ilk model → Yapay zekâ: hakem ve rapor → Canlı doğrulama → Elle etiketleme: sayfa → Elle etiketleme: sonuç → Taşma düzeltme → Teslim paketi. Bologna bağımsızdır, herhangi bir zamanda çalıştırılabilir.");
 
 H2("4.2 Hazırlık");
 tablo(["Adım", "Ne yapar", "Kod"], [

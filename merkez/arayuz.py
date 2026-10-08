@@ -1130,6 +1130,16 @@ class Uygulama:
                                              "çalıştırılacak adımları seçin.")
             return
         sira = [a.id for a in ADIMLAR if a.id in self.secili]   # programdaki doğal sıra
+        if "gd_etiket" in sira and "gd_etiket_ozet" in sira:
+            # 8b, 8a'nın sayfasında elle etiketleme yapılıp CSV indirildikten sonra çalışır
+            sira.remove("gd_etiket_ozet")
+            self.secili.discard("gd_etiket_ozet")
+            self.listeler["duzeltme"].set("gd_etiket_ozet", "sec", "☐")
+            self._secim_sayisi()
+            messagebox.showinfo("8b ayrı çalışır",
+                                "8b. Etiketleri işle bu çalışmadan çıkarıldı.\n\n8a bitince 'Çıktıyı aç' "
+                                "ile etiketleme sayfasını açın, bulguları işaretleyip 'CSV indir'e basın; "
+                                "sonra 8b'yi tek başına çalıştırın.")
         self._baslat(sira)
 
     def _hat(self, ids, baslik="Hattı çalıştır"):
