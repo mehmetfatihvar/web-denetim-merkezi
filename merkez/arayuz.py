@@ -550,6 +550,7 @@ class Uygulama:
             ("Görsel kusur raporu", lambda: k().gorsel / "gorsel_rapor.html"),
             ("Yapay zekâ son raporu", lambda: k().ai_rapor / "rapor.html"),
             ("Doğrulama özeti", lambda: k().dogrulama_cikti / "ozet.txt"),
+            ("Etiketleme sayfası (8a)", lambda: k().etiket / "etiketle.html"),
             ("Taşma düzeltme (önce/sonra)", lambda: k().oto / "goruntu" / "karsilastir.html"),
             ("Teslim paketi", lambda: k().teslim / "index.html"),
             ("Adım raporları (her çalışma)", lambda: k().adim_raporlari / "index.html"),
