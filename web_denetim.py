@@ -23,9 +23,43 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+HATA_DOSYASI = Path(__file__).resolve().parent / "baslatma_hatasi.txt"
 
-from merkez import ayarlar as A  # noqa: E402
-from merkez.adimlar import ADIM, ADIMLAR, AI_HATTI, GRUPLAR, tam_hat  # noqa: E402
+
+def baslatma_hatasi():
+    """Program açılırken çökerse (pythonw ile pencere hiç görünmeden kapanır) hatayı dosyaya
+    yazar ve bir pencerede gösterir. En sık neden: elle indirilen bir dosyanın eksik/bozuk olması."""
+    import traceback
+    metin = traceback.format_exc()
+    try:
+        HATA_DOSYASI.write_text(metin, encoding="utf-8")
+    except OSError:
+        pass
+    sys.stderr.write(metin)
+    try:
+        import tkinter as tk
+        from tkinter import messagebox
+        kok = tk.Tk()
+        kok.withdraw()
+        son = "\n".join(metin.strip().splitlines()[-6:])
+        messagebox.showerror(
+            "Web Denetim Merkezi açılamadı",
+            f"{son}\n\nTam hata: {HATA_DOSYASI}\n\nOlası neden: elle güncellenen bir dosya eksik ya da "
+            "bozuk (ör. GitHub sayfası 'Farklı kaydet' ile HTML olarak kaydedilmiş). Dosyayı GitHub'da "
+            "'Raw' görünümünden kaydedin ya da projeyi ZIP olarak yeniden indirin.")
+        kok.destroy()
+    except Exception:
+        pass
+
+
+try:
+    from merkez import ayarlar as A  # noqa: E402
+    from merkez.adimlar import ADIM, ADIMLAR, AI_HATTI, GRUPLAR, tam_hat  # noqa: E402
+except Exception:
+    if __name__ != "__main__":
+        raise
+    baslatma_hatasi()
+    sys.exit(1)
 
 
 def adim_listesi(isimler, ayar):
@@ -113,4 +147,10 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (SystemExit, KeyboardInterrupt):
+        raise
+    except Exception:
+        baslatma_hatasi()
+        sys.exit(1)

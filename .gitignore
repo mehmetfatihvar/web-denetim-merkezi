@@ -14,3 +14,4 @@ bologna-scraper/bin/
 # Kılavuz üretimi sırasında oluşan geçici dosyalar
 docs/kaynak/taslak.*
 docs/kaynak/*.json
+baslatma_hatasi.txt
