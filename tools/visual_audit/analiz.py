@@ -396,7 +396,8 @@ class Gemini:
                       "yarın aynı komutla kaldığı yerden devam edin.\n", flush=True)
             self.kapali = True
             return False
-        return (any(k in metin for k in ("429", "RESOURCE_EXHAUSTED", "503", "UNAVAILABLE", "500"))
+        return (any(k in metin for k in ("429", "RESOURCE_EXHAUSTED", "503", "UNAVAILABLE", "500",
+                                         "504", "DEADLINE_EXCEEDED"))
                 or zaman_asimi_mi(e))
 
 
@@ -591,7 +592,7 @@ def kisa_hata(hata):
 
 def zaman_asimi_mi(e):
     metin = f"{type(e).__name__} {e}".lower()
-    return "timeout" in metin or "timed out" in metin
+    return any(k in metin for k in ("timeout", "timed out", "deadline_exceeded"))
 
 
 def tek_istek(istemci, is_):
@@ -842,7 +843,7 @@ def hata_turu(hata):
         return "kota / hız sınırı"
     if "json" in hata or hata == "bos_cevap":
         return "geçersiz ya da boş cevap"
-    if "timeout" in hata.lower() or "timed out" in hata.lower():
+    if any(k in hata.lower() for k in ("timeout", "timed out", "deadline_exceeded")):
         return "zaman aşımı (cevap gelmedi)"
     return "bağlantı / sunucu hatası"
 
