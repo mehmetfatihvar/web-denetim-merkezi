@@ -32,6 +32,13 @@ SORUN_SINIRI = 300      # adım başına saklanan en fazla hata/uyarı satırı 
 WINDOWS = os.name == "nt"
 
 
+PROGRAM_IPUCU = {
+    "docker": "Docker Desktop kurulu ve açık mı? Kurmak istemiyorsanız Ayarlar'da Bologna "
+              "çalıştırma biçimini 'yerel' yapın (Go ve PostgreSQL gerekir).",
+    "go": "Go kurulu mu (go.dev/dl)? Ya da Ayarlar'da Bologna çalıştırma biçimini 'docker' yapın.",
+}
+
+
 class Durduruldu(Exception):
     pass
 
@@ -122,6 +129,7 @@ class Calistirici:
                             f"   ({datetime.now():%H:%M:%S})\n{'═' * 70}\n")
         bas = time.time()
         sonuc = "basarili"
+        komut = None
         try:
             for j, komut in enumerate(komutlar, 1):
                 if self.durdur_istendi:
@@ -145,8 +153,11 @@ class Calistirici:
         except Durduruldu:
             sonuc = "durdu"
         except FileNotFoundError as e:
-            self._yaz_ve_kaydet(f"\n✖ Program bulunamadı: {e.filename}. Kurulu ve PATH'te mi?\n")
-            self._sorun("hata", f"Program bulunamadı: {e.filename} (kurulu ve PATH'te mi?)")
+            # Windows'ta e.filename çoğu zaman boş gelir: programın adı komuttan alınır
+            ad = e.filename or (komut.argv[0] if komut is not None and komut.argv else "?")
+            ipucu = PROGRAM_IPUCU.get(Path(str(ad)).stem.lower(), "Kurulu ve PATH'te mi?")
+            self._yaz_ve_kaydet(f"\n✖ Program bulunamadı: {ad}. {ipucu}\n")
+            self._sorun("hata", f"Program bulunamadı: {ad}. {ipucu}")
             sonuc = "hatali"
         except Exception as e:
             self._yaz_ve_kaydet(f"\n✖ Beklenmeyen hata: {e}\n")
