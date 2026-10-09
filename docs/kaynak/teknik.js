@@ -183,7 +183,7 @@ P("Bu iki denetim de test aracının ayrı modlarıdır (`--check-docs`, `--chec
 H3("Kırık link denetimi");
 sirali([
   "Her sayfa ziyaretinde sayfadaki bütün bağlantılar **metinleriyle ve bulundukları sayfayla** toplanır.",
-  "Bağlantılar tekilleştirilir. Adresin `#…` parçası sunucuya gitmediği için aynı adresin farklı parçaları tek bağlantı sayılır.",
+  "Bağlantılar tam adreslerine göre tekilleştirilir. Adresin `#…` parçası atılmaz: aynı sayfanın farklı `#` parçaları ayrı bağlantı sayılır ve ayrı denenir (sunucuya giden istek aynı olduğu için sonuçları da aynıdır).",
   "Her tekil bağlantı bir kez HTTP ile denenir (`check_broken_links`). 400 ve üstü durum ya da bağlantı hatası **kırık** sayılır.",
   "Sonuç `broken_links.csv`'ye yazılır: adres, durum, bağlantıyı veren sayfa, buton metni.",
   "Program bu CSV'den süzülebilir bir HTML rapor (`kirik_link_raporu.html`) ve Excel'de doğru açılan bir CSV üretir (`merkez/denetim_raporu.py`). Durumlar okunur sınıflara çevrilir: 404 Bulunamadı, 410 Kaldırılmış, 403 Erişim yasak, 401 Giriş gerekli, Sunucu hatası (5xx), DNS, zaman aşımı, SSL, bağlantı reddedildi.",
