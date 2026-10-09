@@ -21,6 +21,8 @@ gelir.
 > 🧭 **Teknik doküman:** [docs/TEKNIK_DOKUMAN.pdf](docs/TEKNIK_DOKUMAN.pdf) ·
 > [Word](docs/TEKNIK_DOKUMAN.docx). Programın amacı, mimarisi, süreçleri, hangi sonucun hangi
 > süreçten geldiği ve kod haritası.
+>
+> 📝 **Sürüm notları:** [DEGISIKLIKLER.md](DEGISIKLIKLER.md)
 
 ---
 
@@ -57,7 +59,14 @@ Program açılınca bu bilgisayardaki eksikleri (paket, Chromium) denetler ve va
 uyarı ile **Bağımlılıkları kur** düğmesini gösterir. Ayrıntılı döküm için **Hazırlık > Ortam
 kontrolü**.
 
-**Güncelleme:** `git pull`, ardından `KURULUM.bat` (veya `./kurulum.sh`) bir kez daha.
+**Güncelleme:** programı kapatın; `git pull` yapın **ya da** GitHub'dan **Code → Download ZIP** ile
+indirip ZIP'teki klasörün içindekilerin hepsini program klasörünün üzerine kopyalayın. Ardından
+`KURULUM.bat` (veya `./kurulum.sh`) bir kez daha. `ciktilar/`, `ayarlar.json` ve `.venv/` ZIP'te
+yoktur, korunur.
+
+> ⚠️ Dosyaları GitHub'dan tek tek indirerek güncellemeyin: dosyalar birbirine bağlıdır, eksik bir
+> yeni dosya programın açılmamasına yol açar. Program açılışta çökerse hatayı bir pencerede gösterir
+> ve `baslatma_hatasi.txt` dosyasına yazar.
 
 ---
 
@@ -74,7 +83,8 @@ Pencerenin solunda menü, sağında seçilen sayfa, altında ilerleme paneli ve 
   - Özet kutucukları: site haritası, test edilen sayfa ve kapsam, kırık sayfa, kırık bağlantı,
     görsel kusur, yapay zekâ bulgusu.
   - **Yol haritası:** önerilen sıra (keşif → deneme → tüm site → denetimler → doğrulama →
-    yapay zekâ → teslim). Tamamlanan aşamalar ✔ ile işaretlidir. **Sıradaki** aşama tek
+    yapay zekâ: hazırlık → ilk model → hakem ve rapor → canlı doğrulama → elle etiketleme
+    (sayfa, sonuç) → taşma düzeltme → teslim). Tamamlanan aşamalar ✔ ile işaretlidir. **Sıradaki** aşama tek
     tıkla başlatılır; yalnız eksik kalan adımlar çalışır.
   - Var olan raporlara kısayollar.
 - **Adım sayfaları:**
@@ -136,7 +146,9 @@ geliştirilen araç zinciridir; programda iki sayfaya ayrılır.
 **Yapay zekâ denetimi (1-6):**
 1. Ekran görüntüleri kodla taranır.
 2. Temsilciler seçilir ve sona kadar kaydırılarak yeniden çekilir.
-3. Modeller dilimlere bakar, hakem model anlaşmazlıkları çözer.
+3. İlk model her dilime bakar; yapılamayanları aynı çalıştırmada 2 tur daha dener ve kapsamı
+   yazar (`kapsam.json`). İlk model her dilimi denemeden **hakem** başlamaz; hakem
+   anlaşmazlıklara, yüksek önemli bulgulara ve ilk modelin bakamadığı dilimlere bakar.
 4. Modellerin isabeti ölçülür.
 5. Görünen metinde kodlama hataları aranır.
 6. Ekran görüntüsü kesitli son rapor üretilir.
@@ -146,7 +158,8 @@ geliştirilen araç zinciridir; programda iki sayfaya ayrılır.
 | Aşama | Ne yapar |
 |---|---|
 | 7. Canlı doğrulama | Bulgu olan sayfaları yeniden açıp DOM'da ölçer: DOGRULANDI / GORULMEDI / ELLE. Taşmada sayfa gerçekten yana kaymıyorsa yanlış alarm sayar; hatayı üreten öğeyi ve kaç sayfayı etkilediğini çıkarır (`kok_neden.csv`). Yapay zekâ hattının son adımıdır. |
-| 8. Etiketleme | Ölçülemeyen ve yanlış alarm sayılan bulgularla bir örneklemi tarayıcıda açılan sayfada toplar (`1` Gerçek, `2` Yanlış, `3` Emin değilim). "CSV indir" ile kaydedilen `etiketler.csv` 8b adımıyla işlenir; tür başına elle ölçülmüş isabet çıkar. |
+| 8a. Etiketleme sayfası | Ölçülemeyen ve yanlış alarm sayılan bulgularla bir örneklemi tarayıcıda açılan sayfada toplar (`1` Gerçek, `2` Yanlış, `3` Emin değilim); "CSV indir" ile `etiketler.csv` kaydedilir. |
+| 8b. Etiketleri işle | Etiketlemeden **sonra**, ayrı çalıştırılır: tür başına elle ölçülmüş isabeti çıkarır. 8a'dan sonra indirilmiş bir etiket dosyası yoksa bekler. |
 | 9. CSS denemesi | Önerilen CSS'i canlı sayfalara (yalnız tarayıcı sekmesine) ekleyip yeniden ölçer: düzelen, kalan, yeni bozulan. |
 | 10. Otomatik taşma düzeltme | **Her sitede**: yana kaydıran öğeyi türüne göre sınıflandırıp sitenin kendi sınıflarıyla CSS kuralı üretir, ekleyip ölçer, etkisizse güçlendirir. Çıktı: `oneri.css` ve önce/sonra görüntüleri. |
 
@@ -226,6 +239,8 @@ web-denetim-merkezi/
 │   ├── durum.py                   Özet sayılar, ana sayfa kutucukları, yol haritası
 │   ├── ortam.py                   Kurulum denetimi (paketler, Chromium, Go, Docker)
 │   ├── saglayicilar.py            Yapay zekâ sağlayıcı testi
+│   ├── adim_raporu.py             Her adımın HTML raporu
+│   ├── denetim_raporu.py          Kırık link ve belge raporları (HTML + Excel CSV)
 │   ├── teslim.py                  TESLIM paketi
 │   ├── tema.py                    Açık/karanlık tema
 │   └── arayuz.py                  Masaüstü arayüz
@@ -240,7 +255,7 @@ web-denetim-merkezi/
 ├── bologna-scraper/               OİBS Bologna → PostgreSQL (Go)
 ├── profiller/                     Site profilleri (meu-oidb.json hazır)
 ├── data/meu-oidb/                 ÖİDB site haritası (17.394 sayfa) ve şablon kümeleri
-├── docs/                          Kullanım kılavuzu (Word, PDF) ve kaynağı (docs/kaynak)
+├── docs/                          Kullanım kılavuzu ve teknik doküman (Word, PDF), kaynakları (docs/kaynak)
 ├── tests/                         Birim ve sözleşme testleri
 └── ciktilar/<profil>/             Bütün çıktılar (git'e girmez)
     ├── kesif/site_haritasi.json
@@ -251,6 +266,7 @@ web-denetim-merkezi/
     ├── visual_audit/dogrulama_cikti/, etiket/, css_cikti/, oto_cikti/   Doğrula ve düzelt
     ├── dogrulama/, dogrulama_css/            Doğrulama çekimleri
     ├── routes_verification.csv, clicks_verification.csv
+    ├── adim_raporlari/                       Her adımın her çalışmasının raporu
     ├── merkez_kayitlari/                     Her çalışmanın kaydı
     └── TESLIM/index.html                     Teslim paketi
 ```

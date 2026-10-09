@@ -474,7 +474,7 @@ tablo(["Ayar", "Varsayılan", "Etkisi"], [
 // =================================================================== 12
 H1("12. Kalite güvencesi");
 H2("12.1 Testler");
-P("`tests/test_merkez.py` 45 test içerir ve yalnız standart kütüphaneyle çalışır (araçların bağımlılıkları kurulmadan). Başlıca gruplar:");
+P("`tests/test_merkez.py` 46 test içerir ve yalnız standart kütüphaneyle çalışır (araçların bağımlılıkları kurulmadan). Başlıca gruplar:");
 tablo(["Grup", "Neyi güvenceye alır"], [
   ["Ayarlar ve profiller", "Kaydet/yükle, göreli yollar, yanlış türlerin yok sayılması, yeni profil."],
   ["Adımlar", "Her adımın komutlarının üretilebilmesi; parça bölme; hakem turları; tıklama doğrulamanın kırık link CSV'sini kullanması."],
@@ -542,6 +542,6 @@ tablo(["Terim", "Açıklama"], [
 // =================================================================== kapak ve yazdırma
 const kapak = B.kapakSayfasi("Web Denetim Merkezi", "Teknik Doküman",
   "Programın amacı, mimarisi, süreçleri, sonuçların nasıl elde edildiği ve kod haritası.",
-  ["Sürüm 1.0  ·  Ekim 2026", "github.com/mehmetfatihvar/web-denetim-merkezi", "Mersin Üniversitesi staj çalışması",
+  ["Sürüm 1.1  ·  Ekim 2026", "github.com/mehmetfatihvar/web-denetim-merkezi", "Mersin Üniversitesi staj çalışması",
    "Kullanım için bkz. Kullanım Kılavuzu (docs/KULLANIM_KILAVUZU.pdf)"]);
 B.yaz(CIKTI, SAYFALAR, "Web Denetim Merkezi — Teknik Doküman", kapak);

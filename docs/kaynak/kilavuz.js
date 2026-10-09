@@ -240,10 +240,14 @@ P("**Bağımlılıkları kur** düğmesi eksikleri kurar. Ayrıntılı döküm i
 
 H2("2.5 Güncelleme");
 sirali([
-  "Programı kapatın.",
-  "Klasörde `git pull` çalıştırın (ZIP ile indirdiyseniz yeni ZIP'i aynı klasörün üzerine açın; `ciktilar/`, `ayarlar.json` ve kendi profilleriniz korunur).",
+  "Programı kapatın. Çalışan bir adım varsa önce **Durdur** ile durdurun.",
+  "**ZIP ile:** GitHub'da depo sayfasında **Code > Download ZIP** ile projeyi indirin. ZIP'teki `web-denetim-merkezi-main` klasörünün **içindekilerin hepsini** program klasörünün üzerine kopyalayın ve \"Hedefteki dosyaları değiştir\" deyin.",
+  "**git ile:** program klasöründe `git pull` çalıştırın.",
   "**KURULUM.bat**'ı (Linux/macOS: `./kurulum.sh`) bir kez çalıştırın; yeni paketler varsa kurulur.",
+  "Programı açın. Yarıda kalan bir adım varsa aynı adımı yeniden çalıştırın; kaldığı yerden devam eder.",
 ]);
+P("`ciktilar/` (bütün sonuçlar), `ayarlar.json` (anahtarlar dahil), `.venv/` (kurulum) ve kendi oluşturduğunuz profiller ZIP'te yoktur; güncellemede üzerlerine yazılmaz.");
+dikkat("Dosyaları GitHub'dan **tek tek** indirerek güncellemeyin. Program dosyaları birbirine bağlıdır; yeni bir dosya, sizde olmayan başka bir yeni dosyaya ihtiyaç duyabilir ve program açılmaz. Ayrıca dosya sayfasında \"Farklı kaydet\" Python kodu yerine sayfanın HTML'ini kaydeder. Her zaman yukarıdaki ZIP ya da git yolunu kullanın.");
 
 // ---- 3. Arayüz
 H1("3. Arayüz");
@@ -503,6 +507,8 @@ madde([
 dikkat("Ölçüm yalnızca yana kaymayı görür. `oneri.css` geliştiriciye verilmeden önce `karsilastir.html`'deki önce/sonra görüntülerine ve seçicilere bir kez gözle bakılmalıdır. \"Yeni bozulan\" sıfırdan büyükse o sayfalar elle kontrol edilmelidir.");
 H2("7.9 Raporlar ve özet sayfası");
 P("Menüdeki **Raporlar ve özet** sayfası bütün çıktılardan çıkarılan sayıları tek tabloda gösterir (F5 ile yenilenir) ve raporları açan düğmeleri içerir.");
+P("Düğmeler (ana sayfadaki Raporlar kartında da aynıları vardır): Kanıtlı test raporu, Deneme testi raporu, Kırık link raporu, Kırık belge raporu, Görsel kusur raporu, Yapay zekâ son raporu, Doğrulama özeti, **Etiketleme sayfası (8a)**, Taşma düzeltme (önce/sonra), Teslim paketi, Adım raporları ve Çıktı klasörü. Henüz üretilmemiş raporun düğmesi soluk görünür.");
+not("**Etiketleme sayfası** ile **Taşma düzeltme (önce/sonra)** farklı şeylerdir: ilki bulguları 1/2/3 ile işaretlediğiniz sayfadır (8a), ikincisi otomatik CSS önerisinin önce/sonra görüntüleridir (10. adım) ve yalnız bakmak içindir.");
 gorsel("11_raporlar.png", "Raporlar ve özet sayfası");
 H2("7.10 Adım raporları: her adımın her çalışması");
 P("Program, hangi adım olursa olsun, adım bittiği anda o adım için bir **adım raporu** yazar; kendi raporu olmayan ara adımlar (doğrulama, kümeleme, piksel tarama, yapay zekâ analizi ve hakem, isabet, metin denetimi, canlı doğrulama, CSS denemesi, Bologna, kurulum ve ortam kontrolü) dahil hiçbir adımın sonucu yalnızca bir CSV'de ya da kayıtta kalmaz. Raporda:");
@@ -618,6 +624,7 @@ kod([
 // ---- 12. Sorun giderme
 H1("12. Sorun giderme");
 tablo(["Belirti", "Olası neden", "Çözüm"], [
+  ["BASLAT.bat'a basınca pencere bir an açılıp kapanıyor; ya da \"Web Denetim Merkezi açılamadı\" penceresi çıkıyor", "Bir program dosyası eksik, eski ya da bozuk (çoğunlukla dosyalar tek tek indirilerek güncellendiğinde).", "Projeyi **ZIP ile** güncelleyin (2.5). Hatanın tamamı program klasöründeki `baslatma_hatasi.txt` dosyasındadır; komut isteminde `.venv\\Scripts\\python.exe web_denetim.py` ile de görülebilir."],
   ["BASLAT.bat açılıp kapanıyor, \"Python bulunamadı\"", "Python kurulu değil ya da PATH'te yok.", "Python'u python.org'dan \"Add python.exe to PATH\" işaretli kurun, BASLAT.bat'ı yeniden çalıştırın."],
   ["Kurulum \"Paketler kurulamadı\" / \"Chromium indirilemedi\" diyor", "İnternet ya da kurum proxy'si engelliyor.", "Bağlantıyı ve proxy ayarlarını kontrol edip KURULUM.bat'ı tekrar çalıştırın. Kurum ağında `HTTPS_PROXY` ortam değişkeni gerekebilir."],
   ["Arayüz açılmıyor, \"tkinter\" hatası", "Python Tkinter'sız kurulmuş (Linux'ta sık).", "Linux: `sudo apt install python3-tk`; Windows: Python'u python.org kurulumuyla yeniden kurun. Komut satırı Tkinter'sız da çalışır."],
@@ -635,7 +642,9 @@ tablo(["Belirti", "Olası neden", "Çözüm"], [
   ["Yapay zekâ adımı \"ornekler.csv yok\" diyor", "Önceki adımlar çalışmamış.", "Yapay zekâ hattını baştan (1. adımdan) çalıştırın."],
   ["Canlı doğrulama \"results.jsonl yok\" diyor", "Doğrulama çekimi yapılmamış ya da yarıda kalmış.", "7. adımı yeniden çalıştırın."],
   ["\"Etiketleri işle\" CSV'yi okuyamıyor", "Dosya başka yerde ya da sayfadan indirilmemiş.", "Etiketleme sayfasındaki **CSV indir**'i kullanın; dosya İndirilenler'de değilse Ayarlar'da yolunu verin."],
-  ["Bologna: \"docker\" bulunamadı", "Docker Desktop kurulu değil ya da çalışmıyor.", "Docker Desktop'ı kurup başlatın; ya da Ayarlar'da Bologna modunu \"yerel\" yapıp Go + PostgreSQL kurun."],
+  ["Bologna: \"Program bulunamadı: docker\"", "Docker Desktop kurulu değil ya da çalışmıyor.", "Docker Desktop'ı kurup başlatın; ya da Ayarlar'da Bologna modunu \"yerel\" yapıp Go + PostgreSQL kurun."],
+  ["Docker Desktop: \"WSL is not installed\" / \"WSL needs updating\"", "Docker, Windows'ta WSL 2 üzerinde çalışır.", "Yönetici PowerShell'de `wsl --install --no-distribution` (yarım kuruluysa `wsl --update`), sonra bilgisayarı yeniden başlatın. \"Sanallaştırma kapalı\" derse BIOS/UEFI'de Intel VT-x / AMD SVM'i açın."],
+  ["Docker Desktop \"Starting the Docker Engine...\" ekranında kalıyor", "İlk açılışta motor 1–5 dk'da başlar.", "10 dakikayı geçerse Docker Desktop'ı kapatıp açın (balina simgesi > Quit); olmazsa bilgisayarı yeniden başlatın."],
   ["Disk doldu", "Ekran görüntüleri.", "Eski profillerin `ciktilar/<profil>/test_output/screenshots/` klasörlerini arşivleyip silin."],
 ], [1.6, 1.5, 2.6]);
 P("Çözemediğiniz bir sorunda **Hatalar ve uyarılar > Panoya kopyala** ile listeyi ve ilgili adımın `merkez_kayitlari/` altındaki kayıt dosyasını paylaşın. Ayarlar > Genel > **Ayrıntılı kayıt** açıkken kayıt, her komutun klasörünü ve argümanlarını da içerir.");
@@ -658,9 +667,9 @@ sss.forEach(([s, c]) => { P(`**${s}**`, { spacing: { after: 40 }, keepNext: true
 H1("Ek A. Bologna");
 P("Bologna adımları, OİBS kullanan bir üniversitenin **Bologna Bilgi Paketi**'ni tarayıp birimler, programlar, program çıktıları, ders planları ve ders detaylarını (öğrenme çıktısı × program çıktısı katkı matrisi dahil) ilişkileri koruyarak PostgreSQL'e yazar.");
 sirali([
-  "Docker Desktop'ı kurup başlatın (ya da Ayarlar'da modu \"yerel\" yapıp Go ve PostgreSQL kurun, PostgreSQL adresini girin).",
+  "Docker Desktop'ı kurup başlatın. Windows'ta Docker WSL 2 ister: \"WSL is not installed\" derse yönetici PowerShell'de `wsl --install --no-distribution` çalıştırıp bilgisayarı yeniden başlatın. Docker Desktop'ta sol altta \"Engine running\" yazınca hazırdır (ilk açılış 1–5 dk). Docker istemiyorsanız Ayarlar'da modu \"yerel\" yapıp Go ve PostgreSQL kurun, PostgreSQL adresini girin.",
   "**Bologna > PostgreSQL'i başlat (Docker)**.",
-  "Deneme için **Tek program tara** (varsayılan 1371: Bilgisayar Mühendisliği, ~1 dk).",
+  "Deneme için **Tek program tara** (varsayılan 1371: Bilgisayar Mühendisliği; ilk seferde araç derlendiği için 3–5 dk, sonra ~1 dk).",
   "Tamamı için **Tüm siteyi tara** (~3,5 saat). Yarıda kalırsa **Kesilen taramayı sürdür**.",
   "**Veritabanı istatistikleri** ile tablo kayıt sayılarını görün. Veritabanı adresi: `postgres://bologna:bologna@localhost:5432/bologna` (DBeaver, pgAdmin ile bağlanılabilir).",
 ]);
@@ -682,7 +691,7 @@ const kapak = [
   new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 400 }, children: [new TextRun({ text: "Kullanım Kılavuzu", size: 40, color: "404040" })] }),
   new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: MAVI, space: 4 } }, children: [] }),
   new Paragraph({ spacing: { before: 300, after: 120 }, children: parcala("Web sitelerini baştan sona test eden ve denetleyen masaüstü programı: site keşfi, kanıtlı tarayıcı testi, belge/link/görsel denetim, yapay zekâ destekli görsel denetim, bulguların canlı doğrulanması, otomatik taşma düzeltme önerisi ve OİBS Bologna aktarımı.", { size: 24, color: "404040" }) }),
-  new Paragraph({ spacing: { before: 600 }, children: [new TextRun({ text: "Sürüm 1.0  ·  Ekim 2026", size: 22, color: "595959" })] }),
+  new Paragraph({ spacing: { before: 600 }, children: [new TextRun({ text: "Sürüm 1.1  ·  Ekim 2026", size: 22, color: "595959" })] }),
   new Paragraph({ children: [new TextRun({ text: "github.com/mehmetfatihvar/web-denetim-merkezi", size: 22, color: "595959" })] }),
   new Paragraph({ children: [new TextRun({ text: "Mersin Üniversitesi staj çalışması", size: 22, color: "595959" })] }),
 ];
