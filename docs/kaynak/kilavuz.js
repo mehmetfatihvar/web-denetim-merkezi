@@ -281,7 +281,7 @@ H2("3.4 Ana sayfa");
 gorsel("02_ana_sayfa.png", "Ana sayfa: özet kutucukları, yol haritası ve rapor kısayolları");
 madde([
   "**Özet kutucukları:** site haritasındaki sayfa sayısı, test edilen sayfa ve kapsam, kırık sayfa (4xx/5xx), kırık bağlantı, görsel kusur, kesin yapay zekâ bulgusu. Yalnızca üretilmiş çıktılar için kutucuk görünür.",
-  "**Sıradaki adım kartı:** en üstte, yol haritasında henüz yapılmamış ilk aşama ve ne yaptığı yazar. **▶ Başlat** onu çalıştırır (bir aşama yarım kalmışsa, ör. \"2/4 adım\", yalnız eksik adımlar çalışır). **Kalanları da sırayla çalıştır** sonraki aşamaları da arka arkaya çalıştırır; başlamadan listeyi gösterip onay ister ve sizin yapmanız gereken elle etiketleme aşamasına gelince durur.",
+  "**Sıradaki adım kartı:** en üstte, yol haritasında henüz yapılmamış ilk aşama ve ne yaptığı yazar. **▶ Başlat** onu çalıştırır (bir aşama yarım kalmışsa, ör. \"2/4 adım\", yalnız eksik adımlar çalışır). **Kalanları da sırayla çalıştır** sonraki aşamaları da arka arkaya çalıştırır; başlamadan listeyi ve sizin yapmanız gerekenleri gösterip onay ister. Etiketlemede durmaz: etiketleme sayfasını (8a) oluşturur, sizi bekleyen 8b'yi atlayıp taşma düzeltme ve teslimle devam eder; sonunda etiketleme sayfasını açmayı önerir.",
   "**Yol haritası:** önerilen iş sırası. Tamamlanan aşamalar ✓, sıradaki ▶ ile işaretlidir. Bir satıra tıklamak o aşamanın adım sayfasını açar.",
   "**Raporlar:** yalnız üretilmiş raporların kısayolları görünür.",
 ]);
@@ -292,7 +292,7 @@ gorsel("03_adim_sayfasi.png", "Web testi sayfası: adım listesi ve seçili adı
 madde([
   "**Liste sütunları:** adım adı, tahmini süre, durum. Durum; son çıktının zamanını, çalışırken canlı yüzdeyi (● %45), bitince sonucu (✓ Başarılı / ✗ Başarısız) gösterir.",
   "**Çalıştırmak:** listeden adımı seçip kartın **▶ Çalıştır** düğmesine basın. Bir çalışma sürerken düğme pasiftir.",
-  "**Sayfadakilerin hepsi:** listenin altındaki **▶▶ Bu sayfadakileri sırayla çalıştır…** sayfadaki adımları işaretli bir listede gösterir. Önerilenler işaretli gelir; aynı işi iki kez yapan ya da isteğe bağlı adımlar işaretsizdir (ör. Web testi'nde deneme testi; Bologna'da seviye tarama). İşaretleri değiştirip **Başlat**'a basın; seçilenler listedeki sırayla çalışır. Doğrula ve düzelt'te 8b etiketlemeden sonra ayrıca çalıştırılır.",
+  "**Sayfadakilerin hepsi:** listenin altındaki **▶▶ Bu sayfadakileri sırayla çalıştır…** sayfadaki adımları bir listede gösterir; hepsi işaretli gelir. Yalnız aynı işi iki kez yapan, ön koşul isteyen ya da sizi bekleyen birkaç adım işaretsizdir ve nedeni yanında yazar (ör. Bologna'da \"Seviye tara · Tüm siteyi tara kapsar\", \"Birim testleri · Go kurulu olmalı\"; Doğrula ve düzelt'te 8b). İşaretleri değiştirip **Başlat**'a basın; seçilenler listedeki sırayla çalışır.",
   "**Ayrıntı kartı:** adımın açıklaması, ürettiği dosyalar (✓ var / ○ yok) ve üç düğme: **▶ Çalıştır**, **Sonucu aç** (adımın ana çıktısı) ve **Diğer ▾**. Diğer menüsünde **Son adım raporu** (bkz. 7.10), **Klasörü aç** ve **Çalışacak komutu göster** (adımı çalıştırmadan hangi komutun çalışacağını kayda yazar) bulunur.",
 ]);
 
@@ -369,7 +369,7 @@ tablo(["#", "Aşama", "Neden bu sırada?"], [
 ], [0.3, 1.6, 4]);
 
 H2("5.2 Arka arkaya çalıştırmak");
-P("Ana sayfadaki **Kalanları da sırayla çalıştır**, sıradaki aşamadan başlayıp yol haritasının kalanını arka arkaya çalıştırır. Önce çalışacak adımların listesini gösterip onay ister. Elle etiketleme (10–11) sizin işiniz olduğu için oraya gelince durur; etiketlemeyi bitirip yine **Başlat**'a basın.");
+P("Ana sayfadaki **Kalanları da sırayla çalıştır**, sıradaki aşamadan başlayıp yol haritasının kalanını arka arkaya çalıştırır. Önce çalışacak adımların listesini gösterip onay ister; zincirde etiketleme varsa onay penceresi bunu ⚠ ile belirtir. Etiketlemenin kendisi sizin işiniz: zincir etiketleme sayfasını (8a) oluşturur ama sizi beklemez, 8b'yi atlayıp devam eder. Bitince program etiketleme sayfasını açmayı önerir; işaretleyip **CSV indir**'e basın, sonra ana sayfada **Başlat** 8b'yi çalıştırır. Teslim paketini etiketlerle birlikte istiyorsanız 8b'den sonra Teslim sayfasından yeniden oluşturun.");
 P("Komut satırından aynı zincirler `--calistir tam-hat` ve `--calistir ai-hatti` ile çalıştırılabilir (bkz. 10). **Tam hat** adımları:");
 sirali(VERI.tam_hat.map((i) => `${ADIM[i].ad}`));
 P("**Yapay zekâ hattı** adımları:");
@@ -393,7 +393,7 @@ sirali([
   "Profil: `meu-oidb`. Gerekirse VPN'e bağlanın.",
   "**Web testi > Deneme testi** ile bağlantıyı kontrol edin.",
   "Ana sayfada **Kalanları da sırayla çalıştır**'a basın (harita hazır olduğu için keşif atlanır). Yapay zekâ aşamalarından önce Ayarlar'a anahtarı girin.",
-  "Yapay zekâ kotası dolarsa ertesi gün **Başlat** ile sürdürün; elle etiketleme aşamasında etiketlemeyi yapıp yeniden **Başlat**'a basın.",
+  "Yapay zekâ kotası dolarsa ertesi gün **Başlat** ile sürdürün; zincir bitince etiketleme sayfasını işaretleyip **Başlat** ile 8b'yi çalıştırın.",
   "**Doğrula ve düzelt > 10. Otomatik taşma düzeltme** ile CSS önerisi alın; **Teslim > Teslim paketini oluştur**.",
 ]);
 H3("Yeni bir siteyi ilk kez denetlemek");

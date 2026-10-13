@@ -89,15 +89,16 @@ Pencerenin solunda menü, sağında seçilen sayfa, en altında her zaman görü
     (sayfa, sonuç) → taşma düzeltme → teslim). Tamamlanan aşamalar ✔ ile işaretlidir; satıra
     tıklamak o aşamanın sayfasını açar.
   - **Sıradaki adım kartı:** **Başlat** sıradaki aşamayı çalıştırır (yalnız eksik adımlar).
-    **Kalanları da sırayla çalıştır** kalan aşamaları arka arkaya çalıştırır; elle etiketlemede durur.
+    **Kalanları da sırayla çalıştır** kalan aşamaları arka arkaya çalıştırır. Etiketlemede durmaz:
+    8a'yı oluşturur, sizi bekleyen 8b'yi atlar; onayda ve sonunda etiketlemenin size kaldığını söyler.
   - Var olan raporlara kısayollar.
 - **Adım sayfaları:**
   - Solda adım listesi: tahmini süre ve durum (son çıktı zamanı, çalışırken canlı yüzde,
     bitince başarılı/başarısız).
   - Sağda seçili adımın kartı: açıklama, çıktı dosyaları ve üç düğme: **Çalıştır**, **Sonucu aç**,
     **Diğer ▾** (adım raporu, klasör, çalışacak komut).
-  - Listenin altında **Bu sayfadakileri sırayla çalıştır…**: sayfadaki adımlar önerilenler
-    işaretli olarak listelenir, seçilenler sırayla çalışır.
+  - Listenin altında **Bu sayfadakileri sırayla çalıştır…**: sayfadaki adımlar hepsi işaretli
+    listelenir (yalnız birkaç adım nedeni yazılı olarak işaretsiz), seçilenler sırayla çalışır.
 - **Durum şeridi:** dönen gösterge (program çalışıyorsa döner), çalışan adım ("Adım 2/8"),
   aracın **son hareket** zamanı, geçen süre, hata/uyarı sayaçları, **Durdur** (yalnız çalışırken)
   ve **Ayrıntılar** (kayıt, hatalar, son çalışma paneli). Araç 2 dk çıktı vermezse satır sarıya döner

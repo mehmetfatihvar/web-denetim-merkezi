@@ -744,7 +744,9 @@ class ArayuzTestleri(GeciciKlasor):
         import tkinter as tk
         from merkez import arayuz
         from merkez.adimlar import grup_adimlari
-        for grup, ids in list(arayuz.SAYFA_AKISI.items()) + list(arayuz.SAYFA_SIRASI.items()):
+        from merkez.adimlar import ADIM as ADIMLAR_SOZLUK
+        self.assertTrue(set(arayuz.ISARETSIZ) <= set(ADIMLAR_SOZLUK))
+        for grup, ids in arayuz.SAYFA_SIRASI.items():
             self.assertTrue(set(ids) <= {a.id for a in grup_adimlari(grup)}, grup)
         self.assertEqual(sorted(arayuz.SAYFA_SIRASI["duzeltme"]),
                          sorted(a.id for a in grup_adimlari("duzeltme")))
@@ -756,14 +758,21 @@ class ArayuzTestleri(GeciciKlasor):
             calisan = []
             app._baslat = calisan.append
             p, secim, baslat = app._sayfayi_calistir("web")
-            self.assertEqual([i for i, v in secim.items() if v.get()], ["tam_test", "hatali_tekrar"])
+            hepsi = ["deneme", "tam_test", "hatali_tekrar", "rapor_yenile"]
+            self.assertEqual([i for i, v in secim.items() if v.get()], hepsi)   # varsayılan: hepsi
             baslat()
-            self.assertEqual(calisan[-1], ["tam_test", "hatali_tekrar"])
+            self.assertEqual(calisan[-1], hepsi)
             p, secim, baslat = app._sayfayi_calistir("duzeltme")
-            secim["gd_etiket"].set(True)
+            self.assertFalse(secim["gd_etiket_ozet"].get())                    # etiketlemeyi bekler
             secim["gd_etiket_ozet"].set(True)
             baslat()   # 8a ile 8b birlikte çalışmaz; 9, 10'dan sonra
             self.assertEqual(calisan[-1], ["gd_dogrulama", "gd_etiket", "gd_oto", "gd_css"])
+            # Kalanları da sırayla çalıştır: etiketlemede durmaz, yalnız 8b'yi atlar
+            yol = [("a", "", True, "", ["kesif"]), ("b", "", False, "", ["gd_dogrulama"]),
+                   ("c", "", False, "", ["gd_etiket"]), ("d", "", False, "", ["gd_etiket_ozet"]),
+                   ("e", "", False, "", ["gd_oto", "gd_css"]), ("f", "", False, "", ["teslim"])]
+            self.assertEqual(arayuz.Uygulama._kalan_adimlar(yol, 1),
+                             ["gd_dogrulama", "gd_etiket", "gd_oto", "gd_css", "teslim"])
         finally:
             kok.destroy()
 

@@ -157,17 +157,21 @@ SAYFA_ACIKLAMA = {
     "duzeltme": "Bulgular canlı sitede doğrulanır, yanlış alarmlar elle ayıklanır, taşma için CSS "
                 "düzeltmesi üretilip denenir. Site değişmez; CSS yalnız tarayıcı sekmesine eklenir.",
 }
-ELLE_ASAMALAR = {"gd_etiket", "gd_etiket_ozet"}
-# "Bu sayfadakileri sırayla çalıştır" penceresinde önceden işaretli adımlar (sayfanın olağan akışı).
-# Yazılmayan sayfada hepsi işaretlidir. Aynı işi iki kez yapan ya da isteğe bağlı adımlar işaretsiz gelir.
-SAYFA_AKISI = {
-    "hazirlik": ["ortam", "kesif"],
-    "web": ["tam_test", "hatali_tekrar"],
-    "ai": ["ai_tarama", "ai_temsilci", "ai_yeniden", "ai_analiz", "ai_hakem", "ai_isabet", "ai_metin",
-           "ai_rapor"],
-    "duzeltme": ["gd_dogrulama", "gd_oto", "gd_css"],
-    "bologna": ["bologna_db", "bologna_tumu", "bologna_istatistik"],
+# "Bu sayfadakileri sırayla çalıştır": hepsi işaretli gelir; yalnız şunlar işaretsizdir ve nedeni
+# yanında yazar (aynı işi iki kez yapar, ön koşul ister ya da elle yapılacak işi bekler).
+ISARETSIZ = {
+    "saglayici": "yalnız anahtarları denemek için",
+    "kesif_kullan": "hazır haritanın yerine keşif haritasını koyar",
+    "ollama": "Ollama kurulu ve model indirilmiş olmalı",
+    "gd_etiket_ozet": "etiketlemeyi siz yaptıktan sonra çalıştırın",
+    "bologna_test": "geliştirici içindir; Go kurulu olmalı",
+    "bologna_program": "deneme içindir; Tüm siteyi tara kapsar",
+    "bologna_seviye": "Tüm siteyi tara kapsar",
+    "bologna_devam": "yalnız yarıda kalan tarama için",
 }
+ETIKETLEME_NOTU = ("Etiketleme sizde: zincir 8a ile etiketleme sayfasını oluşturur ama sizi beklemez. "
+                   "Sonunda sayfayı açıp bulguları 1/2/3 ile işaretleyin ve 'CSV indir'e basın; sonra ana "
+                   "sayfada Başlat ile 8b'yi (etiketleri işle) çalıştırın.")
 # Çalışma sırası listedekinden farklı olan sayfalar (9. adım 10.'nun önerisini dener)
 SAYFA_SIRASI = {"duzeltme": ["gd_dogrulama", "gd_etiket", "gd_etiket_ozet", "gd_oto", "gd_css"]}
 CANLI_KARE = "◐◓◑◒"
@@ -663,21 +667,20 @@ class Uygulama:
         self.siradaki_aciklama.configure(text=f"{aciklama}\nÇalışacak: {adlar}")
         self.siradaki_dugme.configure(text="▶  Başlat", command=lambda: self._hat(ids, baslik))
         if len(kalan) > len(ids):
-            self.kalanlar_dugme.configure(command=lambda: self._hat(kalan, "Kalan aşamalar"))
+            self.kalanlar_dugme.configure(command=lambda: self._hat(
+                kalan, "Kalan aşamalar", ETIKETLEME_NOTU if "gd_etiket" in kalan else ""))
             self.kalanlar_dugme.pack(anchor="e", pady=(6, 0))
         else:
             self.kalanlar_dugme.pack_forget()
 
     @staticmethod
     def _kalan_adimlar(yol, onerilen):
-        """Sıradaki aşamadan başlayıp elle yapılan bir aşamaya (etiketleme) kadar kalan adımlar."""
+        """Sıradaki aşamadan sona kalan adımlar. 8b atlanır: sizin etiketlemenizi bekler."""
         sira = []
         for baslik, aciklama, tamam, ayrinti, ids in yol[onerilen:]:
             if tamam:
                 continue
-            if ELLE_ASAMALAR & set(ids):
-                break
-            sira += [a for a in ids if a not in sira]
+            sira += [a for a in ids if a not in sira and a != "gd_etiket_ozet"]
         return sira
 
     def _adima_git(self, grup, adim_id):
@@ -1232,7 +1235,6 @@ class Uygulama:
     def _sayfayi_calistir(self, grup):
         """Sayfadaki adımları işaretli bir listede gösterir; seçilenleri sırayla çalıştırır."""
         ids = SAYFA_SIRASI.get(grup) or [a.id for a in grup_adimlari(grup)]
-        onerilen = set(SAYFA_AKISI.get(grup, ids))
         ad = dict(GRUPLAR)[grup]
         p = tk.Toplevel(self.kok)
         p.title(f"{ad}: sırayla çalıştır")
@@ -1242,22 +1244,23 @@ class Uygulama:
         cer = ttk.Frame(p, padding=20)
         cer.pack(fill="both")
         ttk.Label(cer, text=f"{ad}: sırayla çalıştır", style="AltBaslik.TLabel").pack(anchor="w")
-        ttk.Label(cer, text="İşaretli adımlar aşağıdaki sırayla çalışır. Önerilenler işaretli geldi; "
-                            "isterseniz değiştirin.", style="Soluk.TLabel", wraplength=480,
+        ttk.Label(cer, text="İşaretli adımlar aşağıdaki sırayla çalışır. İşaretsiz gelenlerin nedeni "
+                            "yanında yazıyor.", style="Soluk.TLabel", wraplength=480,
                   justify="left").pack(anchor="w", pady=(2, 10))
         secim = {}
         for i in ids:
             adim = ADIM[i]
-            v = tk.BooleanVar(value=i in onerilen)
-            metin = adim.ad + (f"   ({adim.sure})" if adim.sure else "")
-            if i in ELLE_ASAMALAR:
-                metin += "   · etiketleme sizde"
-            ttk.Checkbutton(cer, text=metin, variable=v).pack(anchor="w", pady=2)
+            v = tk.BooleanVar(value=i not in ISARETSIZ)
+            satir = ttk.Frame(cer)
+            satir.pack(anchor="w", fill="x", pady=2)
+            ttk.Checkbutton(satir, text=adim.ad + (f"   ({adim.sure})" if adim.sure else ""),
+                            variable=v).pack(side="left")
+            if i in ISARETSIZ:
+                ttk.Label(satir, text=f"   · {ISARETSIZ[i]}", style="Soluk.TLabel").pack(side="left")
             secim[i] = v
-        if ELLE_ASAMALAR & set(ids):
-            ttk.Label(cer, text="8b, 8a'dan sonra siz etiketlemeyi yapınca ayrıca çalıştırılır; ikisi "
-                                "birlikte seçilirse 8b çıkarılır.", style="Soluk.TLabel", wraplength=480,
-                      justify="left").pack(anchor="w", pady=(8, 0))
+        if "gd_etiket" in ids:
+            ttk.Label(cer, text=ETIKETLEME_NOTU + " 8a ile 8b birlikte seçilirse 8b çıkarılır.",
+                      style="Uyari.TLabel", wraplength=480, justify="left").pack(anchor="w", pady=(10, 0))
 
         def baslat(_=None):
             secilen = [i for i in ids if secim[i].get()]
@@ -1282,10 +1285,12 @@ class Uygulama:
         p.grab_set()
         return p, secim, baslat
 
-    def _hat(self, ids, baslik="Çalıştır"):
+    def _hat(self, ids, baslik="Çalıştır", not_=""):
         if len(ids) > 1:
             adlar = "\n".join(f"  {i + 1}. {ADIM[a].ad}" for i, a in enumerate(ids))
-            if not messagebox.askyesno(baslik, f"Şu adımlar sırayla çalışacak:\n\n{adlar}\n\nBaşlatılsın mı?"):
+            ek = f"\n\n⚠ {not_}" if not_ else ""
+            if not messagebox.askyesno(baslik, f"Şu adımlar sırayla çalışacak:\n\n{adlar}{ek}\n\n"
+                                               "Başlatılsın mı?", icon="warning" if not_ else "question"):
                 return
         self._baslat(ids)
 
@@ -1624,6 +1629,15 @@ class Uygulama:
         self.kayit.see(konum)
 
     # ================================================================ son çalışma
+    def _etiketleme_hatirlat(self):
+        """Zincir 8a'yı da çalıştırdıysa: sıra kullanıcıda, etiketleme sayfasını açmayı öner."""
+        sayfa = A.Klasorler(self.ayar).etiket / "etiketle.html"
+        if messagebox.askyesno("Etiketleme sizde",
+                               "Etiketleme sayfası hazır. Bulguları 1 Gerçek / 2 Yanlış / 3 Emin değilim ile "
+                               "işaretleyip 'CSV indir'e basın. Sonra ana sayfada Başlat, etiketleri işler (8b).\n\n"
+                               "Etiketleme sayfası şimdi açılsın mı?"):
+            self._yol_ac(sayfa)
+
     def _sonuclari_goster(self, sonuclar, tamam):
         t = self.sonuc_tablo
         t.delete(*t.get_children())
@@ -1657,6 +1671,8 @@ class Uygulama:
             bas, stil, isaret = "Bitti, sorun var", "CanliHata.TLabel", "✖"
         self.canli.configure(text=isaret, style=stil)
         self.durum_cubugu.configure(text=f"{bas}  ·  {ozet_metni}")
+        if any(r["id"] == "gd_etiket" and r["sonuc"] == "basarili" for r in sonuclar) and len(sonuclar) > 1:
+            self.kok.after(300, self._etiketleme_hatirlat)
         self.canlilik.configure(text="Çıktılar için 'Ayrıntılar' > Son çalışma; raporlar ana sayfada.",
                                 style="Soluk.TLabel")
         calisan = len(sonuclar) / max(self.adim_sayisi or len(sonuclar), 1)

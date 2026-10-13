@@ -1,5 +1,13 @@
 # Değişiklikler
 
+## 1.4 (Ekim 2026)
+
+- **Kalanları da sırayla çalıştır** etiketlemede durmaz: 8a'yı (etiketleme sayfası) oluşturur, sizi
+  bekleyen 8b'yi atlayıp taşma düzeltme ve teslimle devam eder. Onay penceresi etiketlemenin size
+  kaldığını ⚠ ile yazar; bitince etiketleme sayfasını açmayı önerir.
+- **Bu sayfadakileri sırayla çalıştır** hepsi işaretli gelir; işaretsiz kalan birkaç adımın nedeni
+  yanında yazar (ör. "Tüm siteyi tara kapsar", "Go kurulu olmalı", "etiketlemeden sonra").
+
 ## 1.3.1 (Ekim 2026)
 
 - Sade görünümde onay kutuları işaretliyken çarpı (☒) yerine vurgu renginde ✓ gösterir; ekran
