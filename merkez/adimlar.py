@@ -578,7 +578,8 @@ def _adimlar() -> List[Adim]:
              "Seçili seviyedeki birim ve programları listeler (veritabanına yazmaz).",
              lambda a: _bologna(a, "discover", "-l", a["bologna_seviye"]), sure="saniyeler"),
         Adim("bologna_program", "bologna", "Tek program tara",
-             "Ayarlardaki program numarasını (curSunit) tarar, örn. 1371 Bilgisayar Müh.",
+             "Ayarlardaki program numarasını (curSunit) tarar, örn. 1371 Bilgisayar Müh. (MEÜ). "
+             "Başka bir sitede numarayı 'Programları listele' gösterir.",
              lambda a: _bologna(a, "scrape", "-p", a["bologna_program"],
                                 *_bologna_tarama_secenekleri(a)), sure="~1 dk"),
         Adim("bologna_seviye", "bologna", "Seviye tara",

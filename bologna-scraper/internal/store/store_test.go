@@ -273,3 +273,61 @@ func must(t *testing.T, err error) {
 		t.Fatal(err)
 	}
 }
+
+// Her site kendi şemasında: aynı kimlikli birimler çakışmaz, bir şema başka siteye yazdırılmaz.
+func TestSiteSchemas(t *testing.T) {
+	dsn := os.Getenv("BOLOGNA_TEST_DB_URL")
+	if dsn == "" {
+		t.Skip("BOLOGNA_TEST_DB_URL yok; PostgreSQL entegrasyon testi atlandı")
+	}
+	ctx := context.Background()
+	admin, err := pgxpool.New(ctx, dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer admin.Close()
+	ek := time.Now().UnixNano()
+	a, b := fmt.Sprintf("site_a_%d", ek), fmt.Sprintf("site_b_%d", ek)
+	defer func() {
+		for _, s := range []string{a, b} {
+			_, _ = admin.Exec(context.Background(), "DROP SCHEMA IF EXISTS "+s+" CASCADE")
+		}
+	}()
+	acik := func(schema, host string) *Store {
+		st, err := OpenSchema(ctx, dsn, schema)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(st.Close)
+		if err := st.Migrate(ctx); err != nil {
+			t.Fatal(err)
+		}
+		if err := st.ClaimSite(ctx, host, "https://"+host+"/oibs/bologna/"); err != nil {
+			t.Fatal(err)
+		}
+		return st
+	}
+	sa, sb := acik(a, "obs.a.edu.tr"), acik(b, "obs.b.edu.tr")
+	if err := sa.Unit(ctx, 7, "A Fakültesi", "lisans"); err != nil {
+		t.Fatal(err)
+	}
+	if err := sb.Unit(ctx, 7, "B Fakültesi", "lisans"); err != nil {
+		t.Fatal(err)
+	}
+	var ad string
+	if err := sa.pool.QueryRow(ctx, "SELECT name FROM units WHERE id = 7").Scan(&ad); err != nil || ad != "A Fakültesi" {
+		t.Fatalf("şema a: %q %v", ad, err)
+	}
+	if h, _ := sb.SiteHost(ctx); h != "obs.b.edu.tr" {
+		t.Fatal(h)
+	}
+	if err := sa.ClaimSite(ctx, "obs.a.edu.tr", ""); err != nil {
+		t.Fatal("aynı site tekrar kabul edilmeli:", err)
+	}
+	if err := sa.ClaimSite(ctx, "obs.b.edu.tr", ""); err == nil {
+		t.Fatal("başka sitenin şemasına yazma kabul edildi")
+	}
+	if _, err := OpenSchema(ctx, dsn, "x; drop"); err == nil {
+		t.Fatal("geçersiz şema kabul edildi")
+	}
+}

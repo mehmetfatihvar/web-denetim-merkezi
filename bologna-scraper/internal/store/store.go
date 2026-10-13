@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -36,14 +37,35 @@ func sourcePriority(s string) int {
 }
 
 type Store struct {
-	pool *pgxpool.Pool
+	pool   *pgxpool.Pool
+	schema string // boş: bağlantı adresindeki search_path (varsayılan public)
 }
 
-func Open(ctx context.Context, dsn string) (*Store, error) {
+var reSchema = regexp.MustCompile(`^[a-z_][a-z0-9_]{0,62}$`)
+
+// Open, bağlantı adresindeki varsayılan şemayla açar.
+func Open(ctx context.Context, dsn string) (*Store, error) { return OpenSchema(ctx, dsn, "") }
+
+// OpenSchema, tüm tabloları verilen PostgreSQL şemasında kullanır. Birden çok üniversite aynı
+// veritabanında kendi şemasında durur; "public" veya boş şema bağlantının varsayılanıdır.
+func OpenSchema(ctx context.Context, dsn, schema string) (*Store, error) {
 	if dsn == "" {
 		return nil, errors.New("veritabanı adresi yok: --db veya BOLOGNA_DB_URL / DATABASE_URL verin")
 	}
-	pool, err := pgxpool.New(ctx, dsn)
+	cfg, err := pgxpool.ParseConfig(dsn)
+	if err != nil {
+		return nil, err
+	}
+	if schema == "public" {
+		schema = ""
+	}
+	if schema != "" {
+		if !reSchema.MatchString(schema) {
+			return nil, fmt.Errorf("geçersiz şema adı %q", schema)
+		}
+		cfg.ConnConfig.RuntimeParams["search_path"] = schema
+	}
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -51,14 +73,47 @@ func Open(ctx context.Context, dsn string) (*Store, error) {
 		pool.Close()
 		return nil, fmt.Errorf("postgres bağlantısı: %w", err)
 	}
-	return &Store{pool: pool}, nil
+	return &Store{pool: pool, schema: schema}, nil
 }
 
 func (s *Store) Close() { s.pool.Close() }
 
 func (s *Store) Migrate(ctx context.Context) error {
+	if s.schema != "" {
+		if _, err := s.pool.Exec(ctx, "CREATE SCHEMA IF NOT EXISTS "+s.schema); err != nil {
+			return fmt.Errorf("şema %s: %w", s.schema, err)
+		}
+	}
 	_, err := s.pool.Exec(ctx, schemaSQL)
 	return err
+}
+
+// ClaimSite, şemayı ilk taranan siteye bağlar. Başka bir sitenin verisi aynı şemaya yazılmak
+// istenirse (kimlikler siteler arasında çakışır, veriler karışırdı) hata döner.
+func (s *Store) ClaimSite(ctx context.Context, host, baseURL string) error {
+	if _, err := s.pool.Exec(ctx, `
+		INSERT INTO site_info (host, base_url) VALUES ($1, $2)
+		ON CONFLICT (only_row) DO NOTHING`, host, baseURL); err != nil {
+		return err
+	}
+	owner, err := s.SiteHost(ctx)
+	if err != nil {
+		return err
+	}
+	if owner != host {
+		return fmt.Errorf("bu şemada %s sitesinin verisi var; %s için başka bir şema verin (--schema) ya da --schema'yı boş bırakın", owner, host)
+	}
+	return nil
+}
+
+// SiteHost, şemanın bağlı olduğu siteyi döndürür (henüz tarama yoksa boş).
+func (s *Store) SiteHost(ctx context.Context) (string, error) {
+	var host string
+	err := s.pool.QueryRow(ctx, "SELECT host FROM site_info").Scan(&host)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", nil
+	}
+	return host, err
 }
 
 // nz, boş string'i NULL'a çevirir.

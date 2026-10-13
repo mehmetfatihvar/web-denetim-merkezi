@@ -1,5 +1,27 @@
 # Değişiklikler
 
+## 1.2 (Ekim 2026)
+
+**Arayüz: daha az düğme, çalışıp çalışmadığı belli**
+- Çalıştırmanın iki yolu kaldı: ana sayfadaki **Başlat** (sıradaki aşama) ve adım sayfasındaki
+  **Çalıştır** (tek adım). "Seçilenleri çalıştır", seçim kutuları, Ctrl+Enter, çift tıklayınca
+  çalıştırma ve üst çubuktaki Tam hat / Yapay zekâ hattı düğmeleri kaldırıldı.
+- Ana sayfada **Sıradaki adım** kartı; **Kalanları da sırayla çalıştır** kalan aşamaları arka
+  arkaya çalıştırır, elle etiketlemede durur. Yol haritası satırına tıklamak o sayfayı açar.
+- Adım kartında üç düğme: Çalıştır, Sonucu aç, Diğer ▾ (adım raporu, klasör, komut).
+- Her zaman görünen **durum şeridi**: dönen gösterge, "Adım 2/8", aracın son hareket zamanı;
+  2 dk çıktı yoksa sarı uyarı, 10 dk yoksa "takılmış olabilir" ve ne yapılacağı. Menüde çalışan
+  sayfanın yanında da gösterge döner. Durdur yalnız çalışırken görünür.
+- Kayıt / hatalar / son çalışma **Ayrıntılar** panelinde; adım başarısız olursa kendiliğinden açılır.
+- "Hata olursa sonraki adımlarla sürdür" Ayarlar > Genel'e taşındı.
+
+**Bologna: her OİBS sitesi**
+- Varsayılan Mersin Üniversitesi; başka bir üniversite `--base-url obs.ornek.edu.tr` (arayüzde
+  profilin OİBS Bologna adresi ya da Yeni site penceresi) ile taranır. Alan adı yeter.
+- Her site aynı veritabanında kendi şemasına yazılır (MEÜ: `public`, diğerleri adresten türetilir,
+  `--schema` ile elle); `site_info` başka bir sitenin aynı şemaya yazılmasını engeller.
+- `-p` ile başka bir sitenin program adresi verilirse o siteye geçilir; `stats` site ve şemayı yazar.
+
 ## 1.1 (Ekim 2026)
 
 **Yapay zekâ görsel denetimi**

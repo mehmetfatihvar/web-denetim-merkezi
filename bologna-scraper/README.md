@@ -1,8 +1,9 @@
 # bologna-scraper
 
-Mersin Üniversitesi **OİBS Bologna Bilgi Paketi**'ni
-([obs.mersin.edu.tr/oibs/bologna](https://obs.mersin.edu.tr/oibs/bologna/index.aspx)) tarayan ve
-tüm veriyi **ilişkileri koruyarak PostgreSQL'e** yazan bir Go komut satırı aracı (CLI).
+**OİBS Bologna Bilgi Paketi**'ni tarayan ve tüm veriyi **ilişkileri koruyarak PostgreSQL'e** yazan bir Go
+komut satırı aracı (CLI). Varsayılan site Mersin Üniversitesi'dir
+([obs.mersin.edu.tr/oibs/bologna](https://obs.mersin.edu.tr/oibs/bologna/index.aspx)). Aynı OİBS altyapısını kullanan
+başka bir üniversite `--base-url` ile taranabilir (bkz. [4.4 Başka üniversiteler](#44-başka-üniversiteler)).
 
 Taranan veriler:
 
@@ -182,7 +183,7 @@ bin/bologna scrape -p 1371
 | `--dry-run` | kapalı | Veritabanına yazma, JSON satırları bas |
 | `--from-file x.json` | – | `discover --json` çıktısındaki programları tara |
 
-Ortak seçenekler: `--db` (veya `BOLOGNA_DB_URL`), `--retries`, `--timeout`, `-v` (ayrıntılı log), `--log-json`,
+Ortak seçenekler: `--db` (veya `BOLOGNA_DB_URL`), `--base-url` ve `--schema` (bkz. 4.4), `--retries`, `--timeout`, `-v` (ayrıntılı log), `--log-json`,
 `--cache-dir ./cache --use-cache` (parser geliştirirken sayfaları diskten okumak için).
 
 ### 4.3 Çalışırken
@@ -193,6 +194,36 @@ Ortak seçenekler: `--db` (veya `BOLOGNA_DB_URL`), `--retries`, `--timeout`, `-v
 - Tekrar çalıştırmak kopya üretmez: kayıtlar sitenin kendi ID'leriyle güncellenir.
 - Sunucu uzun taramada 503 dönebilir. Bu durumda istemci **tüm istekleri** 30 sn bekletir; hata sürerse bekleme 5 dk'ya
   kadar katlanır. Hatalar `scrape_errors` tablosuna yazılır.
+
+### 4.4 Başka üniversiteler
+
+Varsayılan site Mersin Üniversitesi'dir. OİBS Bologna Bilgi Paketi kullanan başka bir üniversiteyi taramak için
+`--base-url` verin (veya `BOLOGNA_BASE_URL` ortam değişkeni). Yalnızca alan adı yeter; tarayıcıdan kopyalanan
+`.../oibs/bologna/index.aspx?...` adresi de kabul edilir:
+
+```bash
+bologna --base-url obs.ornek.edu.tr discover -l lisans        # önce programları listeleyin
+bologna --base-url obs.ornek.edu.tr scrape -p 1234             # tek program (numara discover çıktısından)
+bologna --base-url obs.ornek.edu.tr scrape --all --pool-details
+bologna --base-url obs.ornek.edu.tr stats
+```
+
+`-p` ile başka bir sitenin tam program adresi verilirse (ve `--base-url` verilmemişse) araç o siteye kendiliğinden geçer.
+
+**Veriler karışmaz.** Program ve ders numaraları her sitede ayrı sayıldığından her site aynı veritabanında
+**kendi PostgreSQL şemasına** yazılır. Mersin Üniversitesi önceki sürümlerle uyumlu kalmak için `public` şemasındadır.
+Diğer sitelerin şeması adresten türetilir (`obs.ornek.edu.tr` → `ornek`); `--schema` ile elle de verilebilir.
+Her şema ilk taranan siteye bağlanır (`site_info` tablosu). Başka bir sitenin verisini aynı şemaya yazmaya
+çalışırsanız araç hata verir. SQL ile sorgularken şemayı belirtin:
+
+```sql
+SET search_path TO ornek;            -- ya da: SELECT count(*) FROM ornek.courses;
+SELECT * FROM v_curriculum WHERE program_id = 1234;
+```
+
+Not: Parser Mersin Üniversitesi sayfalarıyla doğrulanmıştır. Aynı altyapıyı kullanan sitelerde sayfa yapısı aynıdır,
+ama bir üniversite sayfalarını özelleştirmişse bazı alanlar boş gelebilir. Yeni bir sitede önce tek programla
+deneyin, sonra `bologna inspect` ile farklı görünen sayfaya bakın.
 
 ---
 

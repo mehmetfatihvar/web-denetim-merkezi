@@ -28,6 +28,7 @@ import (
 type globals struct {
 	db        string
 	baseURL   string
+	schema    string
 	lang      string
 	rps       float64
 	timeout   time.Duration
@@ -62,14 +63,20 @@ func envOr(keys ...string) string {
 
 func newRoot() *cobra.Command {
 	root := &cobra.Command{
-		Use:           "bologna",
-		Short:         "Mersin Üniversitesi Bologna Bilgi Paketi scraper'ı (OİBS -> PostgreSQL)",
-		SilenceUsage:  true,
-		SilenceErrors: true,
+		Use:   "bologna",
+		Short: "OİBS Bologna Bilgi Paketi scraper'ı (OİBS -> PostgreSQL); varsayılan site Mersin Üniversitesi",
+		Long: `OİBS Bologna Bilgi Paketi kullanan herhangi bir üniversitenin sitesini tarar.
+Varsayılan site Mersin Üniversitesi'dir; başka bir site için --base-url verin, ör.:
+  bologna --base-url obs.example.edu.tr discover -l lisans
+Her sitenin verisi aynı veritabanında kendi şemasına yazılır (MEÜ: public).`,
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error { return resolveSite(cmd) },
+		SilenceUsage:      true,
+		SilenceErrors:     true,
 	}
 	f := root.PersistentFlags()
 	f.StringVar(&g.db, "db", envOr("BOLOGNA_DB_URL", "DATABASE_URL"), "PostgreSQL bağlantı adresi (env: BOLOGNA_DB_URL, DATABASE_URL)")
-	f.StringVar(&g.baseURL, "base-url", "https://obs.mersin.edu.tr/oibs/bologna/", "OİBS Bologna kök adresi")
+	f.StringVar(&g.baseURL, "base-url", envOr("BOLOGNA_BASE_URL"), "OİBS Bologna kök adresi; yalnız alan adı da olur (env: BOLOGNA_BASE_URL, varsayılan "+defaultBaseURL+")")
+	f.StringVar(&g.schema, "schema", envOr("BOLOGNA_SCHEMA"), "verinin yazılacağı PostgreSQL şeması (env: BOLOGNA_SCHEMA; boş: siteden türetilir, MEÜ için public)")
 	f.StringVar(&g.lang, "lang", "tr", "içerik dili (tr|en) — parser Türkçe başlıklara göre ayarlıdır")
 	f.Float64Var(&g.rps, "rps", 2, "saniyedeki azami istek (tüm worker'lar toplamı)")
 	f.DurationVar(&g.timeout, "timeout", 30*time.Second, "istek zaman aşımı")
@@ -96,6 +103,47 @@ func logger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(os.Stderr, opts))
 }
 
+// resolveSite, --base-url'i normalleştirir ve şemayı belirler (tüm komutlardan önce).
+func resolveSite(cmd *cobra.Command) error {
+	if g.baseURL == "" {
+		g.baseURL = defaultBaseURL
+	}
+	b, err := normalizeBaseURL(g.baseURL)
+	if err != nil {
+		return err
+	}
+	g.baseURL = b
+	g.schema, err = schemaFor(b, g.schema)
+	return err
+}
+
+// adoptProgramSite: -p ile tarayıcıdan kopyalanmış bir adres verildiyse ve bu adres --base-url'den
+// başka bir siteye aitse, --base-url açıkça verilmemişse o siteye geçer; verilmişse hata döner.
+func adoptProgramSite(cmd *cobra.Command, programs []string) error {
+	for _, p := range programs {
+		if !strings.Contains(p, "://") {
+			continue
+		}
+		b, err := normalizeBaseURL(p)
+		if err != nil || hostOf(b) == hostOf(g.baseURL) {
+			continue
+		}
+		if cmd.Flags().Changed("base-url") || os.Getenv("BOLOGNA_BASE_URL") != "" {
+			return fmt.Errorf("program adresi %s sitesine ait, ama --base-url %s; ikisi aynı site olmalı", hostOf(b), hostOf(g.baseURL))
+		}
+		g.baseURL = b
+		if !cmd.Flags().Changed("schema") && os.Getenv("BOLOGNA_SCHEMA") == "" {
+			g.schema = ""
+		}
+		var err2 error
+		if g.schema, err2 = schemaFor(b, g.schema); err2 != nil {
+			return err2
+		}
+		logger().Info("program adresindeki siteye geçildi", "site", b, "şema", g.schema)
+	}
+	return nil
+}
+
 func client() (*fetch.Client, error) {
 	log := logger()
 	return fetch.New(fetch.Options{
@@ -114,7 +162,7 @@ func migrateCmd() *cobra.Command {
 		Use:   "migrate",
 		Short: "Veritabanı şemasını oluşturur/günceller (idempotent)",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			st, err := store.Open(cmd.Context(), g.db)
+			st, err := store.OpenSchema(cmd.Context(), g.db, g.schema)
 			if err != nil {
 				return err
 			}
@@ -247,6 +295,9 @@ func scrapeCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
 			log := logger()
+			if err := adoptProgramSite(cmd, programs); err != nil {
+				return err
+			}
 			c, err := client()
 			if err != nil {
 				return err
@@ -307,12 +358,15 @@ func scrapeCmd() *cobra.Command {
 			if dryRun {
 				sc.Sink = scraper.NewJSONSink(os.Stdout)
 			} else {
-				if st, err = store.Open(ctx, g.db); err != nil {
+				if st, err = store.OpenSchema(ctx, g.db, g.schema); err != nil {
 					return err
 				}
 				defer st.Close()
 				if err := st.Migrate(ctx); err != nil {
 					return fmt.Errorf("migrate: %w", err)
+				}
+				if err := st.ClaimSite(ctx, hostOf(g.baseURL), g.baseURL); err != nil {
+					return err
 				}
 				sc.Sink = st
 				runID, _ = st.StartRun(ctx, map[string]any{
@@ -525,7 +579,7 @@ func statsCmd() *cobra.Command {
 		Use:   "stats",
 		Short: "Tablolardaki kayıt sayılarını gösterir",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			st, err := store.Open(cmd.Context(), g.db)
+			st, err := store.OpenSchema(cmd.Context(), g.db, g.schema)
 			if err != nil {
 				return err
 			}
@@ -533,6 +587,11 @@ func statsCmd() *cobra.Command {
 			counts, err := st.Stats(cmd.Context())
 			if err != nil {
 				return err
+			}
+			if host, err := st.SiteHost(cmd.Context()); err == nil && host != "" {
+				fmt.Printf("site: %s  (şema: %s)\n", host, g.schema)
+			} else {
+				fmt.Printf("şema: %s\n", g.schema)
 			}
 			tw := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', tabwriter.AlignRight)
 			for _, c := range counts {

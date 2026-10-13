@@ -219,8 +219,9 @@ def profil_kaydet(ayar: dict, profil: str, klasor: Path = None) -> Path:
     return d
 
 
-def yeni_profil(ad: str, url: str, site_adi: str = "", klasor: Path = None) -> str:
-    """Yeni site için profil oluşturur; çıktılar ciktilar/<profil>/ altına gider."""
+def yeni_profil(ad: str, url: str, site_adi: str = "", klasor: Path = None, bologna_url: str = "") -> str:
+    """Yeni site için profil oluşturur; çıktılar ciktilar/<profil>/ altına gider. bologna_url boşsa
+    Bologna adımları varsayılan siteyi (Mersin Üniversitesi OİBS) tarar."""
     kimlik = profil_kimligi(ad or urlparse(url).netloc)
     p = dict(PROFIL_VARSAYILAN)
     p.update({
@@ -230,6 +231,8 @@ def yeni_profil(ad: str, url: str, site_adi: str = "", klasor: Path = None) -> s
         "harita": f"ciktilar/{kimlik}/kesif/site_haritasi.json",
         "site_tanimi": f"the website {urlparse(url).netloc}",
     })
+    if bologna_url and bologna_url.rstrip("/") != PROFIL_VARSAYILAN["bologna_url"].rstrip("/"):
+        p.update(bologna_url=bologna_url, bologna_program="")   # program no siteye özgü: discover ile bulunur
     profil_kaydet(p, kimlik, klasor)
     return kimlik
 

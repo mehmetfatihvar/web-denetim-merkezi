@@ -83,6 +83,13 @@ def uygula(kok: tk.Tk, ad: str, hizli: bool = False) -> dict:
     s.configure("SayiHata.TLabel", font=(aile, 20, "bold"), foreground=p["hata"])
     s.configure("Treeview", rowheight=30)
     s.configure("Ilerleme.Horizontal.TProgressbar", thickness=8)
+    s.configure("Vurgu.TLabel", foreground=p["vurgu"], font=(aile, 10, "bold"))
+    s.configure("Canli.TLabel", foreground=p["vurgu"], font=(aile, 15, "bold"))
+    s.configure("CanliUyari.TLabel", foreground=p["uyari"], font=(aile, 15, "bold"))
+    s.configure("CanliBasari.TLabel", foreground=p["basari"], font=(aile, 15, "bold"))
+    s.configure("CanliHata.TLabel", foreground=p["hata"], font=(aile, 15, "bold"))
+    s.configure("Buyuk.TLabel", font=(aile, 13, "bold"), foreground=p["metin"])
+    s.configure("Buyuk.Accent.TButton", font=(aile, 11, "bold"), padding=(18, 8))
     return p
 
 

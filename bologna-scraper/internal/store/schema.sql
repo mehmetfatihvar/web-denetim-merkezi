@@ -1,4 +1,4 @@
--- Mersin Üniversitesi Bologna Bilgi Paketi şeması
+-- OİBS Bologna Bilgi Paketi şeması (her site kendi PostgreSQL şemasında; MEÜ: public)
 -- Doğal anahtarlar OİBS'nin kendi ID'leridir: curUnit, curSunit, curCourse.
 -- Tüm komutlar idempotent: `bologna migrate` tekrar tekrar çalıştırılabilir.
 
@@ -185,6 +185,14 @@ CREATE TABLE IF NOT EXISTS course_outcome_matrix (
     PRIMARY KEY (course_id, lo_no, program_outcome_id)
 );
 CREATE INDEX IF NOT EXISTS course_outcome_matrix_po_idx ON course_outcome_matrix(program_outcome_id);
+
+-- Şemanın ait olduğu site (tek satır). Başka bir sitenin verisi bu şemaya yazılamaz.
+CREATE TABLE IF NOT EXISTS site_info (
+    only_row    BOOLEAN PRIMARY KEY DEFAULT true CHECK (only_row),
+    host        TEXT NOT NULL,
+    base_url    TEXT NOT NULL,
+    claimed_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 
 CREATE TABLE IF NOT EXISTS scrape_runs (
     id           BIGSERIAL PRIMARY KEY,

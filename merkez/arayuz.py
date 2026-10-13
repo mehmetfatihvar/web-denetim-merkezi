@@ -1,7 +1,11 @@
 """Web Denetim Merkezi masaüstü arayüzü (Tkinter; Python ile birlikte gelir).
 
-Düzen: solda menü (profil, sayfalar, tema), sağda sayfa içeriği; altta ilerleme paneli
-ve çalışma kaydı / hatalar / son çalışma sekmeleri. Görünüm `tema.py`'de.
+Düzen: solda menü (profil, sayfalar, tema), sağda sayfa içeriği; en altta her zaman görünen
+durum şeridi (çalışırken canlılık göstergesi, ilerleme, Durdur) ve isteğe göre açılan ayrıntılar
+(çalışma kaydı / hatalar / son çalışma). Görünüm `tema.py`'de.
+
+Kullanım ilkesi: bir şeyi başlatmanın iki yolu vardır. Ana sayfada sıradaki aşama (Başlat),
+adım sayfalarında seçili adım (Çalıştır).
 """
 
 import os
@@ -16,7 +20,7 @@ from pathlib import Path
 
 from . import SURUM, adim_raporu, denetim_raporu, tema, yollar
 from . import ayarlar as A
-from .adimlar import ADIM, ADIMLAR, AI_HATTI, GRUPLAR, grup_adimlari, tam_hat
+from .adimlar import ADIM, GRUPLAR, grup_adimlari
 from .calistirici import Calistirici
 from .durum import adim_durumlari, kutucuklar, ozet, yol_haritasi
 from .izleme import sure_metni
@@ -82,7 +86,8 @@ SITE_ALANLARI = [
     ]),
     ("Bologna (OİBS)", [
         ("bologna_url", "OİBS Bologna adresi", "metin",
-         "OİBS kullanan herhangi bir üniversitenin Bologna kök adresi.", None),
+         "OİBS kullanan herhangi bir üniversitenin Bologna adresi; alan adı yeter (ör. obs.ornek.edu.tr). "
+         "Her sitenin verisi veritabanında kendi şemasına yazılır (Mersin Üni.: public).", None),
         ("bologna_program", "Program no (curSunit)", "metin", "", None),
         ("bologna_seviye", "Seviye", "secim", "",
          ["onlisans", "lisans", "yukseklisans", "doktora", "onlisans,lisans,yukseklisans,doktora"]),
@@ -134,6 +139,8 @@ GENEL_ALANLARI = [
          "sade: hızlı (önerilen). modern: Windows 11 görünümü, ama Windows'ta sayfa geçişleri ve "
          "tema değişimi belirgin yavaştır. Programı yeniden açınca geçerli olur.",
          ["sade", "modern"]),
+        ("hata_olursa_devam", "Hata olursa sonraki adımlarla sürdür", "evet",
+         "Kapalıyken birden çok adımlı bir çalışmada bir adım başarısız olursa sonrakiler çalışmaz.", None),
         ("ayrintili", "Ayrıntılı kayıt (hata ayıklama)", "evet",
          "Her komutun klasörü, ortamı ve argümanları kayda yazılır; Bologna -v ile çalışır.", None),
     ]),
@@ -150,6 +157,9 @@ SAYFA_ACIKLAMA = {
     "duzeltme": "Bulgular canlı sitede doğrulanır, yanlış alarmlar elle ayıklanır, taşma için CSS "
                 "düzeltmesi üretilip denenir. Site değişmez; CSS yalnız tarayıcı sekmesine eklenir.",
 }
+ELLE_ASAMALAR = {"gd_etiket", "gd_etiket_ozet"}
+CANLI_KARE = "◐◓◑◒"
+SESSIZ_UYARI_SN, SESSIZ_CIDDI_SN = 120, 600
 DURUM_YAZI = {"baslangic": "● Çalışıyor", "basarili": "✔ Başarılı", "hatali": "✖ Başarısız",
               "durdu": "■ Durduruldu"}
 
@@ -273,7 +283,11 @@ class Uygulama:
         self.son_ilerleme = None
         self.sorun_sayisi = 0
         self.adim_sayisi = 0
-        self.secili = set()              # çalıştırılmak üzere işaretli adımlar
+        self.son_hareket = None          # araçtan son çıktı/olay zamanı (canlılık göstergesi)
+        self.canli_kare = 0
+        self.calisan_grup = None
+        self.ayrinti_acik = False
+        self.calistir_dugmeleri = []     # çalışma sürerken kapatılan düğmeler
         self.adim_durumu = {}            # bu oturumda: adım id -> (durum, metin)
         self.listeler = {}               # grup -> Treeview
         self.ayrinti = {}                # grup -> ayrıntı paneli parçaları
@@ -295,12 +309,10 @@ class Uygulama:
         self._tema_renkleri()
         kok.update_idletasks()
         kok.deiconify()
-        kok.after(200, self._bolmeyi_ayarla)
         self.ortam_sorunlari = []
         threading.Thread(target=self._ortami_denetle, daemon=True).start()
         kok.after(100, self._kuyrugu_bosalt)
         kok.protocol("WM_DELETE_WINDOW", self._kapat)
-        kok.bind("<Control-Return>", lambda _: self._secilenleri_calistir())
         kok.bind("<F5>", lambda _: self._durumu_yenile())
 
     # ================================================================ iskelet
@@ -311,14 +323,14 @@ class Uygulama:
         sag = ttk.Frame(kap)
         sag.pack(side="left", fill="both", expand=True)
         self._ust_cubuk(sag)
+        self._durum_seridi(sag)          # en altta, her zaman görünür
         bol = ttk.PanedWindow(sag, orient="vertical")
-        bol.pack(fill="both", expand=True, padx=16, pady=(0, 12))
+        bol.pack(fill="both", expand=True, padx=16, pady=(0, 6))
         self.bolme = bol
         self.icerik = ttk.Frame(bol)
         bol.add(self.icerik, weight=5)
-        alt = ttk.Frame(bol)
-        bol.add(alt, weight=3)
-        self._alt_panel(alt)
+        self.alt = ttk.Frame(bol)        # ayrıntılar: kayıt, hatalar, son çalışma (açılır/kapanır)
+        self._alt_panel(self.alt)
 
         self.sayfalar["ana"] = self._ana_sayfa()
         for grup, _ in GRUPLAR:
@@ -357,6 +369,7 @@ class Uygulama:
         etiket("MENÜ", "kucuk", padx=18, pady=(22, 4))
         ogeler = [("ana", "Ana sayfa")] + list(GRUPLAR) + [("raporlar", "Raporlar ve özet"),
                                                           ("ayarlar", "Ayarlar")]
+        self.menu_basliklari = dict(ogeler)
         for ad, baslik in ogeler:
             e = tk.Label(y, text=baslik, anchor="w", padx=14, pady=7, cursor="hand2")
             e.pack(fill="x", padx=8, pady=1)
@@ -397,6 +410,9 @@ class Uygulama:
     def _menu_boya(self, ad, uzerinde=False):
         p = self.p
         secili = ad == self.etkin_sayfa
+        calisan = ad == self.calisan_grup
+        self.menu_ogeleri[ad].configure(
+            text=self.menu_basliklari[ad] + (f"   {CANLI_KARE[self.canli_kare % 4]}" if calisan else ""))
         self.menu_ogeleri[ad].configure(
             background=p["secili"] if secili else (p["kenar"] if uzerinde else p["yan"]),
             foreground=p["metin"], font=(self.yazi, 10, "bold" if secili else "normal"))
@@ -404,34 +420,32 @@ class Uygulama:
     def _ust_cubuk(self, ust):
         c = ttk.Frame(ust, padding=(16, 14, 16, 10))
         c.pack(fill="x")
-        sag = ttk.Frame(c)            # önce sağ: dar pencerede düğmeler değil açıklama kısalır
-        sag.pack(side="right", anchor="n")
-        sol = ttk.Frame(c)
-        sol.pack(side="left", fill="x", expand=True)
-        self.sayfa_basligi = ttk.Label(sol, text="", style="Baslik.TLabel")
+        self.sayfa_basligi = ttk.Label(c, text="", style="Baslik.TLabel")
         self.sayfa_basligi.pack(anchor="w")
-        self.sayfa_alt = ttk.Label(sol, text="", style="Soluk.TLabel", wraplength=520, justify="left")
-        self.sayfa_alt.pack(anchor="w")
-        sol.bind("<Configure>", lambda e: _sar([self.sayfa_alt], e.width - 10))
-        self.calistir_dugmesi = ttk.Button(sag, text="▶  Seçilenleri çalıştır", style="Accent.TButton",
-                                           command=self._secilenleri_calistir)
-        self.calistir_dugmesi.grid(row=0, column=0, padx=(0, 6))
-        ttk.Button(sag, text="Tam hat", command=lambda: self._hat(tam_hat(self.ayar))).grid(row=0, column=1)
-        ttk.Button(sag, text="Yapay zekâ hattı", command=lambda: self._hat(AI_HATTI)).grid(row=0, column=2, padx=6)
-        self.durdur_dugmesi = ttk.Button(sag, text="■  Durdur", command=self._durdur, state="disabled")
-        self.durdur_dugmesi.grid(row=0, column=3)
-        self.devam_var = tk.BooleanVar(value=self.ayar["hata_olursa_devam"])
-        ttk.Checkbutton(sag, text="Hata olursa sonraki adımlarla sürdür", style="Switch.TCheckbutton",
-                        variable=self.devam_var,
-                        command=lambda: self.ayar.update(hata_olursa_devam=self.devam_var.get())
-                        ).grid(row=1, column=0, columnspan=4, sticky="e", pady=(6, 0))
+        self.sayfa_alt = ttk.Label(c, text="", style="Soluk.TLabel", wraplength=520, justify="left")
+        self.sayfa_alt.pack(anchor="w", fill="x")
+        c.bind("<Configure>", lambda e: _sar([self.sayfa_alt], e.width - 40))
 
-    def _bolmeyi_ayarla(self, oran=0.6):
-        """Boştayken içeriğe, çalışırken kayda daha çok yer ver."""
+    def _bolmeyi_ayarla(self, oran=0.55):
+        """Ayrıntılar açıkken içerik ile ayrıntılar arasındaki bölme."""
         self.kok.update_idletasks()
         h = self.bolme.winfo_height()
-        if h > 200:
+        if h > 200 and self.ayrinti_acik:
             self.bolme.sashpos(0, int(h * oran))
+
+    def _ayrintilar(self, acik=None, sekme=None):
+        """Kayıt / hatalar / son çalışma panelini aç-kapat. Boştayken kapalıdır: ekranı içerik kullanır."""
+        acik = (not self.ayrinti_acik) if acik is None else acik
+        if acik != self.ayrinti_acik:
+            self.ayrinti_acik = acik
+            if acik:
+                self.bolme.add(self.alt, weight=4)
+                self.kok.after(50, self._bolmeyi_ayarla)
+            else:
+                self.bolme.forget(self.alt)
+        if acik and sekme is not None:
+            self.alt_defter.select(sekme)
+        self.ayrinti_dugmesi.configure(text="Ayrıntıları gizle  ▾" if acik else "Ayrıntılar  ▴")
 
     def _sayfa_ac(self, ad):
         with _CizimiDondur(self.icerik):
@@ -490,6 +504,29 @@ class Uygulama:
                                      wraplength=600)
         self.uyari_metni.pack(side="left", anchor="w", fill="x", expand=True)
         self.uyari_metni.bind("<Configure>", lambda e: _sar([self.uyari_metni], e.width - 10))
+
+        # Sıradaki aşama: ana sayfanın tek ana eylemi
+        self.siradaki = ttk.Frame(f, style="Card.TFrame")
+        self.siradaki.pack(fill="x", pady=(0, 12))
+        self.siradaki_serit = tk.Frame(self.siradaki, width=5)
+        self.siradaki_serit.pack(side="left", fill="y")
+        ic = ttk.Frame(self.siradaki, padding=(16, 14))
+        ic.pack(side="left", fill="both", expand=True)
+        dugmeler = ttk.Frame(ic)
+        dugmeler.pack(side="right", anchor="center", padx=(12, 0))
+        self.siradaki_dugme = ttk.Button(dugmeler, text="▶  Başlat", style="Buyuk.Accent.TButton")
+        self.siradaki_dugme.pack(anchor="e")
+        self.kalanlar_dugme = ttk.Button(dugmeler, text="Kalanları da sırayla çalıştır")
+        self.kalanlar_dugme.pack(anchor="e", pady=(6, 0))
+        self.calistir_dugmeleri += [self.siradaki_dugme, self.kalanlar_dugme]
+        self.siradaki_ust = ttk.Label(ic, text="SIRADAKİ ADIM", style="Soluk.TLabel")
+        self.siradaki_ust.pack(anchor="w")
+        self.siradaki_baslik = ttk.Label(ic, text="", style="Buyuk.TLabel")
+        self.siradaki_baslik.pack(anchor="w")
+        self.siradaki_aciklama = ttk.Label(ic, text="", style="Soluk.TLabel", justify="left")
+        self.siradaki_aciklama.pack(anchor="w", fill="x")
+        ic.bind("<Configure>", lambda e: _sar([self.siradaki_aciklama], e.width - 300))
+
         self.kutu_cercevesi = ttk.Frame(f)
         self.kutu_cercevesi.pack(fill="x", pady=(0, 12))
 
@@ -501,32 +538,18 @@ class Uygulama:
         yh = ttk.Frame(govde, style="Card.TFrame", padding=16)
         yh.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
         ttk.Label(yh, text="Yol haritası", style="AltBaslik.TLabel").pack(anchor="w")
-        ttk.Label(yh, text="Önerilen sıra. Tamamlanan aşamalar işaretlidir; sıradakini tek tıkla başlatın.",
+        ttk.Label(yh, text="Bütün aşamalar ve durumları. Bir aşamaya tıklayınca adımları açılır.",
                   style="Soluk.TLabel").pack(anchor="w", pady=(0, 8))
         self.yol_cercevesi = ttk.Frame(yh)
         self.yol_cercevesi.pack(fill="x")
 
-        sag = ttk.Frame(govde)
-        sag.grid(row=0, column=1, sticky="nsew")
-        rk = ttk.Frame(sag, style="Card.TFrame", padding=16)
-        rk.pack(fill="x")
+        rk = ttk.Frame(govde, style="Card.TFrame", padding=16)
+        rk.grid(row=0, column=1, sticky="new")
         ttk.Label(rk, text="Raporlar", style="AltBaslik.TLabel").pack(anchor="w")
-        ttk.Label(rk, text="Üretilmiş raporlar açılabilir.", style="Soluk.TLabel").pack(anchor="w", pady=(0, 8))
-        self.rapor_dugmeleri = []
-        for ad, fn in self._rapor_yollari():
-            d = ttk.Button(rk, text=ad, command=lambda fn=fn: self._yol_ac(fn()))
-            d.pack(fill="x", pady=2)
-            self.rapor_dugmeleri.append((d, fn))
-
-        ip = ttk.Frame(sag, style="Card.TFrame", padding=16)
-        ip.pack(fill="x", pady=(12, 0))
-        ttk.Label(ip, text="İpuçları", style="AltBaslik.TLabel").pack(anchor="w")
-        for metin in ("Adım sayfalarında satırın başındaki kutuya tıklayarak birden fazla adımı "
-                      "seçin, Ctrl+Enter ile çalıştırın.",
-                      "Uzun işler yarıda kalırsa aynı adımı tekrar çalıştırın; araçlar kaldığı "
-                      "yerden devam eder.",
-                      "Başka bir site için sol menüden 'Yeni site ekle'yi kullanın."):
-            ttk.Label(ip, text="•  " + metin, wraplength=330, justify="left").pack(anchor="w", pady=2)
+        self.rapor_aciklama = ttk.Label(rk, text="", style="Soluk.TLabel", wraplength=300, justify="left")
+        self.rapor_aciklama.pack(anchor="w", pady=(0, 8))
+        self.rapor_cercevesi = ttk.Frame(rk)
+        self.rapor_cercevesi.pack(fill="x")
         return kc
 
     def _ortam_uyarisi(self, sorunlar):
@@ -534,7 +557,7 @@ class Uygulama:
         if sorunlar:
             self.uyari_metni.configure(text="Bu bilgisayarda kurulum eksik:\n" +
                                        "\n".join(f"•  {s}" for s in sorunlar))
-            self.uyari_karti.pack(fill="x", pady=(0, 12), before=self.kutu_cercevesi)
+            self.uyari_karti.pack(fill="x", pady=(0, 12), before=self.siradaki)
             self._yaz("⚠ Kurulum eksik: " + "; ".join(sorunlar) +
                       ". Ana sayfadaki 'Bağımlılıkları kur' düğmesini kullanın.\n")
         else:
@@ -558,18 +581,17 @@ class Uygulama:
         ]
 
     def _ana_sayfayi_doldur(self, zorla=False):
-        """Kutucuklar ve yol haritası son durum verisinden kurulur; veri değişmediyse dokunulmaz."""
+        """Sıradaki aşama, kutucuklar ve yol haritası son durum verisinden kurulur; veri
+        değişmediyse dokunulmaz (raporlar yine de güncellenir: yeni dosya üretilmiş olabilir)."""
         veri = getattr(self, "_son_durum", None)
         if veri is None:
             return
         imza = (veri["kutular"], veri["yol"])
-        if not zorla and imza == getattr(self, "_ana_imza", None):
-            for d, fn in self.rapor_dugmeleri:
-                d.configure(state="normal" if fn().exists() else "disabled")
-            return
-        self._ana_imza = imza
-        with _CizimiDondur(self.icerik):
-            self._ana_sayfayi_kur(veri)
+        if zorla or imza != getattr(self, "_ana_imza", None):
+            self._ana_imza = imza
+            with _CizimiDondur(self.icerik):
+                self._ana_sayfayi_kur(veri)
+        self._raporlari_kur()
 
     def _ana_sayfayi_kur(self, veri):
         for w in self.kutu_cercevesi.winfo_children():
@@ -583,29 +605,91 @@ class Uygulama:
             ttk.Label(kutu, text=deger, style=stil).pack(anchor="w")
             ttk.Label(kutu, text=alt, style="Soluk.TLabel").pack(anchor="w")
 
+        yol = veri["yol"]
+        onerilen = next((i for i, a in enumerate(yol) if not a[2]), None)
+        self._siradaki_kur(yol, onerilen)
+
         for w in self.yol_cercevesi.winfo_children():
             w.destroy()
-        onerilen = None
-        for i, (baslik, aciklama, tamam, ayrinti, ids) in enumerate(veri["yol"]):
-            if not tamam and onerilen is None:
-                onerilen = i
-            satir = ttk.Frame(self.yol_cercevesi, padding=(0, 6))
+        for i, (baslik, aciklama, tamam, ayrinti, ids) in enumerate(yol):
+            satir = ttk.Frame(self.yol_cercevesi, padding=(0, 5), cursor="hand2")
             satir.pack(fill="x")
             satir.columnconfigure(1, weight=1)
             isaret = "✔" if tamam else ("▶" if i == onerilen else "○")
-            ttk.Label(satir, text=isaret, width=2, font=(self.yazi, 13, "bold"),
-                      foreground=self.p["basari"] if tamam else (self.p["vurgu"] if i == onerilen
-                                                                 else self.p["soluk"])
-                      ).grid(row=0, column=0, rowspan=2, sticky="n", padx=(0, 8))
-            ttk.Label(satir, text=f"{i + 1}. {baslik}" + (f"   ·  {ayrinti}" if ayrinti else ""),
-                      style="Kalin.TLabel").grid(row=0, column=1, sticky="w")
-            ttk.Label(satir, text=aciklama, style="Soluk.TLabel").grid(row=1, column=1, sticky="w")
-            ttk.Button(satir, text="Çalıştır" if i != onerilen else "▶  Sıradaki: çalıştır",
-                       style="Accent.TButton" if i == onerilen else "TButton",
-                       command=lambda ids=ids, b=baslik: self._hat(ids, b)
-                       ).grid(row=0, column=2, rowspan=2, sticky="e")
-        for d, fn in self.rapor_dugmeleri:
-            d.configure(state="normal" if fn().exists() else "disabled")
+            ogeler = [ttk.Label(satir, text=isaret, width=2, font=(self.yazi, 13, "bold"),
+                                foreground=self.p["basari"] if tamam else (self.p["vurgu"] if i == onerilen
+                                                                           else self.p["soluk"]))]
+            ogeler[0].grid(row=0, column=0, rowspan=2, sticky="n", padx=(0, 8))
+            ogeler.append(ttk.Label(satir, text=f"{i + 1}. {baslik}" + (f"   ·  {ayrinti}" if ayrinti else ""),
+                                    style="Vurgu.TLabel" if i == onerilen else "Kalin.TLabel"))
+            ogeler[-1].grid(row=0, column=1, sticky="w")
+            ogeler.append(ttk.Label(satir, text=aciklama, style="Soluk.TLabel"))
+            ogeler[-1].grid(row=1, column=1, sticky="w")
+            ogeler.append(ttk.Label(satir, text="›", style="Soluk.TLabel", font=(self.yazi, 14)))
+            ogeler[-1].grid(row=0, column=2, rowspan=2, sticky="e")
+            grup = ADIM[ids[0]].grup
+            for w in [satir] + ogeler:
+                w.bind("<Button-1>", lambda _, g=grup, a=ids[0]: self._adima_git(g, a))
+
+    def _siradaki_kur(self, yol, onerilen):
+        """Ana sayfanın tepesindeki tek ana eylem: sıradaki aşama ve Başlat."""
+        if onerilen is None:
+            self.siradaki_ust.configure(text="HEPSİ TAMAM")
+            self.siradaki_baslik.configure(text="Bütün aşamalar tamamlandı")
+            self.siradaki_aciklama.configure(text="Raporlar sağdaki listede. Teslim paketini yeniden "
+                                                  "oluşturmak ya da bir adımı tekrar çalıştırmak için ilgili "
+                                                  "sayfayı açın.")
+            self.siradaki_dugme.configure(text="Teslim paketini aç",
+                                          command=lambda: self._yol_ac(A.Klasorler(self.ayar).teslim / "index.html"))
+            self.kalanlar_dugme.pack_forget()
+            return
+        baslik, aciklama, _, ayrinti, ids = yol[onerilen]
+        kalan = self._kalan_adimlar(yol, onerilen)
+        self.siradaki_ust.configure(text=f"SIRADAKİ ADIM  ·  {onerilen + 1}/{len(yol)}")
+        self.siradaki_baslik.configure(text=baslik + (f"   ·  {ayrinti}" if ayrinti else ""))
+        adlar = ", ".join(ADIM[a].ad for a in ids)
+        self.siradaki_aciklama.configure(text=f"{aciklama}\nÇalışacak: {adlar}")
+        self.siradaki_dugme.configure(text="▶  Başlat", command=lambda: self._hat(ids, baslik))
+        if len(kalan) > len(ids):
+            self.kalanlar_dugme.configure(command=lambda: self._hat(kalan, "Kalan aşamalar"))
+            self.kalanlar_dugme.pack(anchor="e", pady=(6, 0))
+        else:
+            self.kalanlar_dugme.pack_forget()
+
+    @staticmethod
+    def _kalan_adimlar(yol, onerilen):
+        """Sıradaki aşamadan başlayıp elle yapılan bir aşamaya (etiketleme) kadar kalan adımlar."""
+        sira = []
+        for baslik, aciklama, tamam, ayrinti, ids in yol[onerilen:]:
+            if tamam:
+                continue
+            if ELLE_ASAMALAR & set(ids):
+                break
+            sira += [a for a in ids if a not in sira]
+        return sira
+
+    def _adima_git(self, grup, adim_id):
+        self._sayfa_ac(grup)
+        t = self.listeler[grup]
+        t.selection_set(adim_id)
+        t.focus(adim_id)
+        t.see(adim_id)
+        self._ayrinti_goster(grup)
+
+    def _raporlari_kur(self):
+        """Ana sayfada yalnız üretilmiş raporlar görünür (soluk, basılamaz düğme yok)."""
+        var = [(ad, fn) for ad, fn in self._rapor_yollari() if fn().exists()]
+        imza = tuple(ad for ad, _ in var)
+        if imza == getattr(self, "_rapor_imza", None):
+            return
+        self._rapor_imza = imza
+        for w in self.rapor_cercevesi.winfo_children():
+            w.destroy()
+        for ad, fn in var:
+            ttk.Button(self.rapor_cercevesi, text=ad, command=lambda fn=fn: self._yol_ac(fn())
+                       ).pack(fill="x", pady=2)
+        self.rapor_aciklama.configure(text="Açmak için tıklayın." if var else
+                                      "Henüz rapor yok. Adımlar çalıştıkça burada görünür.")
 
     # ================================================================ adım sayfaları
     def _grup_sayfasi(self, grup):
@@ -616,23 +700,18 @@ class Uygulama:
 
         sol = ttk.Frame(f)
         sol.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
-        t = ttk.Treeview(sol, columns=("sec", "ad", "sure", "durum"), show="headings", selectmode="browse")
-        for kol, baslik, gen, uzar in (("sec", "", 36, False), ("ad", "Adım", 300, True),
-                                       ("sure", "Tahmini süre", 120, False),
-                                       ("durum", "Durum", 210, False)):
+        t = ttk.Treeview(sol, columns=("ad", "sure", "durum"), show="headings", selectmode="browse")
+        for kol, baslik, gen, uzar in (("ad", "Adım", 320, True), ("sure", "Tahmini süre", 120, False),
+                                       ("durum", "Durum", 220, False)):
             t.heading(kol, text=baslik, anchor="w")
-            t.column(kol, width=gen, stretch=uzar, anchor="center" if kol == "sec" else "w")
+            t.column(kol, width=gen, stretch=uzar, anchor="w")
         for adim in grup_adimlari(grup):
-            t.insert("", "end", iid=adim.id, values=("☐", adim.ad, adim.sure or "", ""))
+            t.insert("", "end", iid=adim.id, values=(adim.ad, adim.sure or "", ""))
         kc = ttk.Scrollbar(sol, command=t.yview)
         t.configure(yscrollcommand=kc.set)
         t.pack(side="left", fill="both", expand=True)
         kc.pack(side="right", fill="y")
         t.bind("<<TreeviewSelect>>", lambda _, g=grup: self._ayrinti_goster(g))
-        t.bind("<Button-1>", lambda e, tv=t: self._liste_tiklama(e, tv))
-        t.bind("<space>", lambda _, tv=t: self._sec_degistir(tv, tv.focus()))
-        t.bind("<Double-1>", lambda e, tv=t: (None if tv.identify_column(e.x) == "#1"
-                                              else self._baslat([tv.focus()]) if tv.focus() else None))
         self.listeler[grup] = t
 
         kart = ttk.Frame(f, style="Card.TFrame", padding=18)
@@ -650,47 +729,18 @@ class Uygulama:
         dugmeler.pack(anchor="w", pady=(16, 0), fill="x")
         calistir = ttk.Button(dugmeler, text="▶  Çalıştır", style="Accent.TButton")
         calistir.pack(side="left")
-        cikti = ttk.Button(dugmeler, text="Çıktıyı aç")
+        self.calistir_dugmeleri.append(calistir)
+        cikti = ttk.Button(dugmeler, text="Sonucu aç")
         cikti.pack(side="left", padx=6)
-        klasor = ttk.Button(dugmeler, text="Klasörü aç")
-        klasor.pack(side="left")
-        rapor = ttk.Button(kart, text="Son adım raporunu aç")
-        rapor.pack(anchor="w", pady=(8, 0))
-        ttk.Button(kart, text="Çalışacak komutu kayda yaz",
-                   command=lambda g=grup: self._komut_goster(self.listeler[g].focus())
-                   ).pack(anchor="w", pady=(8, 0))
-        ipucu = ttk.Label(kart, text="İpucu: satırın başındaki kutuyla birden fazla adımı seçip üstteki "
-                                     "'Seçilenleri çalıştır'ı kullanın. Çift tıklama adımı çalıştırır.",
-                          style="Soluk.TLabel", wraplength=380, justify="left")
-        ipucu.pack(side="bottom", anchor="w")
-        kart.bind("<Configure>", lambda e, ls=(baslik, aciklama, ciktilar, ipucu): _sar(ls, e.width - 40))
+        diger = ttk.Button(dugmeler, text="Diğer  ▾")
+        diger.pack(side="left")
+        kart.bind("<Configure>", lambda e, ls=(baslik, aciklama, ciktilar): _sar(ls, e.width - 40))
         self.ayrinti[grup] = dict(baslik=baslik, durum=durum, aciklama=aciklama, ciktilar=ciktilar,
-                                  calistir=calistir, cikti=cikti, klasor=klasor, rapor=rapor)
+                                  calistir=calistir, cikti=cikti, diger=diger)
         ilk = grup_adimlari(grup)[0].id
         t.selection_set(ilk)
         t.focus(ilk)
         return f
-
-    def _liste_tiklama(self, e, tv):
-        if tv.identify_region(e.x, e.y) == "cell" and tv.identify_column(e.x) == "#1":
-            oge = tv.identify_row(e.y)
-            if oge:
-                self._sec_degistir(tv, oge)
-                return "break"
-
-    def _sec_degistir(self, tv, oge):
-        if not oge:
-            return
-        if oge in self.secili:
-            self.secili.discard(oge)
-        else:
-            self.secili.add(oge)
-        tv.set(oge, "sec", "☑" if oge in self.secili else "☐")
-        self._secim_sayisi()
-
-    def _secim_sayisi(self):
-        n = len(self.secili)
-        self.calistir_dugmesi.configure(text=f"▶  Seçilenleri çalıştır ({n})" if n else "▶  Seçilenleri çalıştır")
 
     def _ayrinti_goster(self, grup):
         t = self.listeler[grup]
@@ -711,16 +761,27 @@ class Uygulama:
             a["ciktilar"].configure(text="\n".join(
                 ("✔\u00a0" if p.exists() else "○\u00a0") + _kisa_yol(p) for p in yollar_))
         else:
-            a["ciktilar"].configure(text="Bu adım dosya üretmez; sonuç çalışma kaydında görünür.")
+            a["ciktilar"].configure(text="Bu adım dosya üretmez; sonuç adım raporunda ve çalışma kaydında görünür.")
         var = [p for p in yollar_ if p.exists()]
-        rapor = adim_raporu.son_rapor(A.Klasorler(self.ayar).adim_raporlari, adim_id)
-        a["calistir"].configure(command=lambda: self._baslat([adim_id]))
+        calisiyor = self.calistirici.calisiyor or bool(self.is_parcacigi and self.is_parcacigi.is_alive())
+        a["calistir"].configure(command=lambda: self._baslat([adim_id]),
+                                state="disabled" if calisiyor else "normal")
         a["cikti"].configure(state="normal" if var else "disabled", command=lambda: self._cikti_ac(adim_id))
-        a["rapor"].configure(state="normal" if rapor else "disabled",
-                             command=lambda: ac(adim_raporu.son_rapor(A.Klasorler(self.ayar).adim_raporlari,
-                                                                      adim_id)))
-        a["klasor"].configure(state="normal" if yollar_ else "disabled",
-                              command=lambda: self._klasor_ac(yollar_[0].parent))
+        a["diger"].configure(command=lambda: self._diger_menu(a["diger"], adim_id, yollar_))
+
+    def _diger_menu(self, dugme, adim_id, yollar_):
+        """Kartın ikincil eylemleri tek menüde: klasör, adım raporu, komut."""
+        p = self.p
+        m = tk.Menu(self.kok, tearoff=False, background=p["kart"], foreground=p["metin"],
+                    activebackground=p["secili"], activeforeground=p["metin"])
+        rapor = adim_raporu.son_rapor(A.Klasorler(self.ayar).adim_raporlari, adim_id)
+        m.add_command(label="Son adım raporunu aç", state="normal" if rapor else "disabled",
+                      command=lambda: ac(rapor))
+        m.add_command(label="Çıktı klasörünü aç", state="normal" if yollar_ else "disabled",
+                      command=lambda: self._klasor_ac(yollar_[0].parent))
+        m.add_separator()
+        m.add_command(label="Çalışacak komutu kayda yaz", command=lambda: self._komut_goster(adim_id))
+        m.tk_popup(dugme.winfo_rootx(), dugme.winfo_rooty() + dugme.winfo_height())
 
     def _durum_metni(self, adim_id):
         if adim_id in self.adim_durumu:
@@ -745,17 +806,23 @@ class Uygulama:
     # ================================================================ raporlar ve ayarlar
     def _raporlar_sayfasi(self):
         f = ttk.Frame(self.icerik)
-        dugmeler = ttk.Frame(f)
-        dugmeler.pack(fill="x", pady=(0, 8))
-        ttk.Button(dugmeler, text="Yenile (F5)", command=self._durumu_yenile).pack(side="left")
+        f.columnconfigure(1, weight=1)
+        f.rowconfigure(0, weight=1)
+        sol = ttk.Frame(f, style="Card.TFrame", padding=14)
+        sol.grid(row=0, column=0, sticky="nsw", padx=(0, 12))
+        ttk.Label(sol, text="Raporlar", style="AltBaslik.TLabel").pack(anchor="w", pady=(0, 6))
+        self.rapor_sayfa_dugmeleri = []
         for ad, fn in self._rapor_yollari() + [("Program rehberi", lambda: yollar.REPO / "README.md")]:
-            ttk.Button(dugmeler, text=ad, command=lambda fn=fn: self._yol_ac(fn())).pack(side="left", padx=(6, 0))
+            d = ttk.Button(sol, text=ad, command=lambda fn=fn: self._yol_ac(fn()))
+            d.pack(fill="x", pady=2)
+            self.rapor_sayfa_dugmeleri.append((d, fn))
+        ttk.Button(sol, text="Sayıları yenile (F5)", command=self._durumu_yenile).pack(fill="x", pady=(12, 0))
         self.ozet_tablo = ttk.Treeview(f, columns=("deger",), show="tree headings")
         self.ozet_tablo.heading("#0", text="Ölçüm", anchor="w")
         self.ozet_tablo.heading("deger", text="Değer", anchor="w")
-        self.ozet_tablo.column("#0", width=320)
-        self.ozet_tablo.column("deger", width=700)
-        self.ozet_tablo.pack(fill="both", expand=True)
+        self.ozet_tablo.column("#0", width=300)
+        self.ozet_tablo.column("deger", width=500)
+        self.ozet_tablo.grid(row=0, column=1, sticky="nsew")
         return f
 
     def _ayarlar_sayfasi(self):
@@ -817,50 +884,61 @@ class Uygulama:
         return ttk.Entry(ust, textvariable=v, show="•" if tur == "gizli" else "")
 
     # ================================================================ alt panel
-    def _alt_panel(self, ust):
-        self.ilerleme = ttk.Frame(ust, style="Card.TFrame", padding=(14, 10))
-        self.ilerleme.pack(fill="x", pady=(8, 8))
-        f = self.ilerleme
-        f.columnconfigure(1, weight=1)
-        self.durum_cubugu = ttk.Label(f, text="Hazır. Bir adım seçip çalıştırın.", style="Kalin.TLabel")
-        self.durum_cubugu.grid(row=0, column=0, columnspan=3, sticky="w")
-        sayac = ttk.Frame(f)
-        sayac.grid(row=0, column=3, sticky="e")
-        self.gecen_etiketi = ttk.Label(sayac, text="", style="Soluk.TLabel")
+    def _durum_seridi(self, ust):
+        """En altta her zaman görünen şerit. Çalışırken: dönen gösterge, adım, ilerleme, geçen süre,
+        'son hareket' ve Durdur. Araç uzun süre çıktı vermezse sarıya döner ve ne yapılacağını söyler."""
+        s = ttk.Frame(ust, style="Card.TFrame", padding=(14, 10))
+        s.pack(side="bottom", fill="x", padx=16, pady=(0, 12))
+        self.serit = s
+        s.columnconfigure(2, weight=1)
+        self.canli = ttk.Label(s, text="●", style="Soluk.TLabel", width=2, font=(self.yazi, 15, "bold"))
+        self.canli.grid(row=0, column=0, rowspan=2, sticky="nw", padx=(0, 8))
+        self.durum_cubugu = ttk.Label(s, text="Hazır.", style="Kalin.TLabel")
+        self.durum_cubugu.grid(row=0, column=1, columnspan=2, sticky="w")
+        sag = ttk.Frame(s)
+        sag.grid(row=0, column=3, sticky="e")
+        self.gecen_etiketi = ttk.Label(sag, text="", style="Soluk.TLabel")
         self.gecen_etiketi.pack(side="left", padx=(0, 14))
-        self.hata_etiketi = ttk.Label(sayac, text="Hata 0", style="Hata.TLabel", cursor="hand2")
+        self.hata_etiketi = ttk.Label(sag, text="", style="Hata.TLabel", cursor="hand2")
         self.hata_etiketi.pack(side="left", padx=(0, 10))
-        self.uyari_etiketi = ttk.Label(sayac, text="Uyarı 0", style="Uyari.TLabel", cursor="hand2")
-        self.uyari_etiketi.pack(side="left")
+        self.uyari_etiketi = ttk.Label(sag, text="", style="Uyari.TLabel", cursor="hand2")
+        self.uyari_etiketi.pack(side="left", padx=(0, 12))
         for e in (self.hata_etiketi, self.uyari_etiketi):
-            e.bind("<Button-1>", lambda _: self.alt_defter.select(self.sorun_sekmesi))
+            e.bind("<Button-1>", lambda _: self._ayrintilar(True, self.sorun_sekmesi))
+        self.durdur_dugmesi = ttk.Button(sag, text="■  Durdur", command=self._durdur)
+        self.ayrinti_dugmesi = ttk.Button(sag, text="Ayrıntılar  ▴", command=lambda: self._ayrintilar())
+        self.ayrinti_dugmesi.pack(side="left")
+        self.canlilik = ttk.Label(s, text="Sıradaki adımı ana sayfadan, tek bir adımı ilgili sayfadan başlatın.",
+                                  style="Soluk.TLabel", wraplength=760, justify="left")
+        self.canlilik.grid(row=1, column=1, columnspan=3, sticky="w", pady=(2, 0))
 
         self.cubuk_satirlari = []
-        for satir, ad in ((1, "Bu adım"), (2, "Toplam")):
-            etiket = ttk.Label(f, text=ad, style="Soluk.TLabel", width=9)
-            cubuk = ttk.Progressbar(f, maximum=1000, style="Ilerleme.Horizontal.TProgressbar")
-            yuzde = ttk.Label(f, text="", style="Yuzde.TLabel" if satir == 1 else "TLabel")
+        for satir, ad in ((2, "Bu adım"), (3, "Toplam")):
+            etiket = ttk.Label(s, text=ad, style="Soluk.TLabel", width=9)
+            cubuk = ttk.Progressbar(s, maximum=1000, style="Ilerleme.Horizontal.TProgressbar")
+            yuzde = ttk.Label(s, text="", style="Yuzde.TLabel" if satir == 2 else "TLabel")
             self.cubuk_satirlari.append((etiket, cubuk, yuzde, satir))
         (_, self.adim_cubugu, self.adim_yuzde, _), (_, self.genel_cubugu, self.genel_yuzde, _) = \
             self.cubuk_satirlari
         self._cubuklari_goster(False)
 
+    def _alt_panel(self, ust):
         self.alt_defter = ttk.Notebook(ust)
-        self.alt_defter.pack(fill="both", expand=True)
+        self.alt_defter.pack(fill="both", expand=True, pady=(6, 0))
         self.alt_defter.add(self._kayit_sekmesi(), text="  Çalışma kaydı  ")
         self.sorun_sekmesi = self._sorun_sekmesi()
         self.alt_defter.add(self.sorun_sekmesi, text="  Hatalar ve uyarılar (0)  ")
         self.sonuc_sekmesi = self._sonuc_sekmesi()
         self.alt_defter.add(self.sonuc_sekmesi, text="  Son çalışma: sonuçlar ve çıktılar  ")
-        self._yaz(f"Web Denetim Merkezi {SURUM} hazır. Sol menüden bir sayfa açın; adımları seçip "
-                  "'Seçilenleri çalıştır'a basın (Ctrl+Enter).\n")
+        self._yaz(f"Web Denetim Merkezi {SURUM} hazır. Ana sayfadaki 'Başlat' sıradaki adımı çalıştırır; "
+                  "tek bir adımı ilgili sayfada seçip 'Çalıştır'a basın.\n")
 
     def _cubuklari_goster(self, goster):
         for etiket, cubuk, yuzde, satir in self.cubuk_satirlari:
-            for w, kol, ek in ((etiket, 0, {}), (cubuk, 1, {"columnspan": 2}), (yuzde, 3, {})):
+            for w, kol, ek in ((etiket, 1, {}), (cubuk, 2, {}), (yuzde, 3, {})):
                 if goster:
                     w.grid(row=satir, column=kol, sticky="we" if w is cubuk else "w",
-                           pady=(8 if satir == 1 else 4, 0), padx=(0, 10) if w is not yuzde else 0, **ek)
+                           pady=(8 if satir == 2 else 4, 0), padx=(0, 10) if w is not yuzde else 0, **ek)
                 else:
                     w.grid_remove()
 
@@ -954,6 +1032,7 @@ class Uygulama:
     def _tema_renkleri(self):
         p = self.p
         self._yan_boya()
+        self.siradaki_serit.configure(background=p["vurgu"])
         self.kayit.configure(background=p["konsol"], foreground=p["konsol_metin"],
                              insertbackground=p["konsol_metin"])
         self.kayit.tag_configure("hata", foreground="#ff7b72")
@@ -1069,6 +1148,7 @@ class Uygulama:
             ("url", "Başlangıç adresi", "https://www.ornek.edu.tr/"),
             ("ad", "Profil adı", "Örnek Üniversitesi"),
             ("site_adi", "Raporlardaki site adı", "Örnek Üniversitesi web sitesi"),
+            ("bologna_url", "OİBS Bologna adresi (isteğe bağlı)", "obs.ornek.edu.tr  ·  boşsa Mersin Üni."),
         ), 1):
             ttk.Label(cer, text=etiket).grid(row=2 * i - 1, column=0, sticky="w", pady=(6, 0))
             v = tk.StringVar()
@@ -1080,7 +1160,7 @@ class Uygulama:
                 e.focus_set()
         ttk.Label(cer, text="Çıktılar ciktilar/<profil>/ altına yazılır; mevcut sitelerin verileri "
                             "etkilenmez. Keşif kuralları sonra Ayarlar > Site profili'nden düzenlenir.",
-                  style="Soluk.TLabel", wraplength=520, justify="left").grid(row=7, column=0, columnspan=2,
+                  style="Soluk.TLabel", wraplength=520, justify="left").grid(row=9, column=0, columnspan=2,
                                                                              pady=12, sticky="w")
 
         def olustur(_=None):
@@ -1093,7 +1173,8 @@ class Uygulama:
             if kimlik in A.profiller() and not messagebox.askyesno(
                     "Profil var", f"'{kimlik}' profili var. Üzerine yazılsın mı?", parent=p):
                 return
-            kimlik = A.yeni_profil(ad, url, degerler["site_adi"].get().strip())
+            kimlik = A.yeni_profil(ad, url, degerler["site_adi"].get().strip(),
+                                   bologna_url=degerler["bologna_url"].get().strip())
             p.destroy()
             self.profil_secim.configure(values=A.profiller())
             self.profil_secim.set(kimlik)
@@ -1103,7 +1184,7 @@ class Uygulama:
                       "(önce site keşfi).\n")
 
         d = ttk.Frame(cer)
-        d.grid(row=8, column=0, columnspan=2, sticky="e")
+        d.grid(row=10, column=0, columnspan=2, sticky="e")
         ttk.Button(d, text="Vazgeç", command=p.destroy).pack(side="left", padx=6)
         ttk.Button(d, text="Oluştur", style="Accent.TButton", command=olustur).pack(side="left")
         p.bind("<Return>", olustur)
@@ -1125,28 +1206,12 @@ class Uygulama:
         self._profil_degisti()
 
     # ================================================================ çalıştırma
-    def _secilenleri_calistir(self):
-        if not self.secili:
-            messagebox.showinfo("Seçim yok", "Adım listelerinde satırın başındaki kutuya tıklayarak "
-                                             "çalıştırılacak adımları seçin.")
-            return
-        sira = [a.id for a in ADIMLAR if a.id in self.secili]   # programdaki doğal sıra
-        if "gd_etiket" in sira and "gd_etiket_ozet" in sira:
-            # 8b, 8a'nın sayfasında elle etiketleme yapılıp CSV indirildikten sonra çalışır
-            sira.remove("gd_etiket_ozet")
-            self.secili.discard("gd_etiket_ozet")
-            self.listeler["duzeltme"].set("gd_etiket_ozet", "sec", "☐")
-            self._secim_sayisi()
-            messagebox.showinfo("8b ayrı çalışır",
-                                "8b. Etiketleri işle bu çalışmadan çıkarıldı.\n\n8a bitince 'Çıktıyı aç' "
-                                "ile etiketleme sayfasını açın, bulguları işaretleyip 'CSV indir'e basın; "
-                                "sonra 8b'yi tek başına çalıştırın.")
-        self._baslat(sira)
-
-    def _hat(self, ids, baslik="Hattı çalıştır"):
-        adlar = "\n".join(f"  {i + 1}. {ADIM[a].ad}" for i, a in enumerate(ids))
-        if messagebox.askyesno(baslik, f"Şu adımlar sırayla çalışacak:\n\n{adlar}\n\nBaşlatılsın mı?"):
-            self._baslat(ids)
+    def _hat(self, ids, baslik="Çalıştır"):
+        if len(ids) > 1:
+            adlar = "\n".join(f"  {i + 1}. {ADIM[a].ad}" for i, a in enumerate(ids))
+            if not messagebox.askyesno(baslik, f"Şu adımlar sırayla çalışacak:\n\n{adlar}\n\nBaşlatılsın mı?"):
+                return
+        self._baslat(ids)
 
     def _baslat(self, ids):
         if self.calistirici.calisiyor or (self.is_parcacigi and self.is_parcacigi.is_alive()):
@@ -1156,10 +1221,12 @@ class Uygulama:
             return
         adimlar = [ADIM[i] for i in ids]
         ayar = dict(self.ayar)   # çalışma sırasında form değişse de bu çalışma etkilenmesin
+        for d in self.calistir_dugmeleri:
+            d.configure(state="disabled")
         self.durdur_dugmesi.configure(state="normal")
-        self.calistir_dugmesi.configure(state="disabled")
+        self.durdur_dugmesi.pack(side="left", padx=(0, 8), before=self.ayrinti_dugmesi)
         self.durum_cubugu.configure(text="Başlatılıyor…")
-        self.calisma_bas = time.monotonic()
+        self.calisma_bas = self.son_hareket = time.monotonic()
         self.son_ilerleme = None
         self._sorunlari_temizle()
         self.hata_etiketi.configure(text="Hata 0")
@@ -1170,7 +1237,7 @@ class Uygulama:
         self._cubuklari_goster(True)
         self.alt_defter.select(0)
         self._saat()
-        devam = self.devam_var.get()
+        devam = bool(self.ayar.get("hata_olursa_devam"))
 
         def is_():
             tamam = self.calistirici.calistir(adimlar, ayar, devam_et=devam)
@@ -1179,6 +1246,8 @@ class Uygulama:
         self.is_parcacigi.start()
 
     def _durdur(self):
+        self.durdur_dugmesi.configure(state="disabled")
+        self.durum_cubugu.configure(text="Durduruluyor… araç kısmi sonucunu kaydediyor")
         threading.Thread(target=self.calistirici.durdur, daemon=True).start()
 
     def _komut_goster(self, adim_id):
@@ -1191,7 +1260,7 @@ class Uygulama:
                 self._yaz("  " + k.goster() + "\n")
         except Exception as e:
             self._yaz(f"  Komut hazırlanamadı: {e}\n")
-        self.alt_defter.select(0)
+        self._ayrintilar(True, 0)
 
     def _cikti_ac(self, adim_id):
         yollar_ = ADIM[adim_id].ciktilar(self.ayar)
@@ -1240,6 +1309,8 @@ class Uygulama:
         self._son_durum = veri
         if self.etkin_sayfa == "ana":
             self._ana_sayfayi_doldur()
+        for d, fn in self.rapor_sayfa_dugmeleri:
+            d.configure(state="normal" if fn().exists() else "disabled")
         if eski is not None and eski["ozet"] == veri["ozet"]:
             return
         t = self.ozet_tablo
@@ -1275,6 +1346,8 @@ class Uygulama:
         try:
             while time.monotonic() - bas < 0.04:
                 ileti = self.kuyruk.get_nowait()
+                if ileti[0] in ("yaz", "olay"):
+                    self.son_hareket = time.monotonic()
                 if ileti[0] == "yaz":
                     metin.append(ileti[1])
                     continue
@@ -1295,9 +1368,7 @@ class Uygulama:
                     if ayar.get("harita") != self.ayar.get("harita"):   # 'Keşif haritasını kullan'
                         self.ayar["harita"] = ayar["harita"]
                         self._formu_doldur()
-                    self.durdur_dugmesi.configure(state="disabled")
-                    self.calistir_dugmesi.configure(state="normal")
-                    self.calisma_bas = None
+                    self._calisma_bitti()
                     self._baslik(f"Web Denetim Merkezi {SURUM}")
                     self._durumu_yenile()
                     self.kok.bell()
@@ -1314,7 +1385,10 @@ class Uygulama:
         if tur == "basladi":
             self.adim_sayisi = len(o["adimlar"])
         elif tur == "adim_basladi":
-            self.durum_cubugu.configure(text=f"Adım {o['sira']}/{o['toplam']}  ·  {o['ad']}")
+            self.durum_cubugu.configure(text=f"Çalışıyor  ·  Adım {o['sira']}/{o['toplam']}  ·  {o['ad']}")
+            onceki, self.calisan_grup = self.calisan_grup, ADIM[o["id"]].grup
+            for g in {onceki, self.calisan_grup} - {None}:
+                self._menu_boya(g)
             self._adim_durum(o["id"], "baslangic", "● Çalışıyor…")
             self.adim_cubugu.configure(mode="indeterminate")
             self.adim_cubugu.start(15)
@@ -1373,11 +1447,43 @@ class Uygulama:
                 self._ayrinti_goster(grup)
 
     def _saat(self):
-        """Çalışırken geçen süreyi her saniye günceller (ilerleme satırı gelmese de)."""
+        """Çalışırken dört kez saniyede: dönen gösterge, geçen süre ve 'son hareket'. Araç uzun süre
+        hiç çıktı vermezse gösterge sarıya döner ve ne yapılacağını söyler."""
         if self.calisma_bas is None:
             return
-        self.gecen_etiketi.configure(text=f"Geçen {sure_metni(time.monotonic() - self.calisma_bas)}")
-        self.kok.after(1000, self._saat)
+        simdi = time.monotonic()
+        self.canli_kare += 1
+        sessiz = simdi - (self.son_hareket or simdi)
+        stil = "Canli.TLabel" if sessiz < SESSIZ_UYARI_SN else "CanliUyari.TLabel"
+        self.canli.configure(text=CANLI_KARE[self.canli_kare % 4], style=stil)
+        self.gecen_etiketi.configure(text=f"Geçen {sure_metni(simdi - self.calisma_bas)}")
+        if sessiz < 5:
+            metin = "Program çalışıyor  ·  araç az önce çıktı verdi"
+        elif sessiz < SESSIZ_UYARI_SN:
+            metin = f"Program çalışıyor  ·  son hareket {sure_metni(sessiz)} önce"
+        elif sessiz < SESSIZ_CIDDI_SN:
+            metin = (f"Son çıktı {sure_metni(sessiz)} önce. Bazı adımlar uzun sürer; "
+                     "gösterge dönüyorsa program çalışıyor ve bekliyor.")
+        else:
+            metin = (f"Son çıktı {sure_metni(sessiz)} önce; takılmış olabilir. 'Durdur'a basıp adımı "
+                     "yeniden başlatın (biten işler atlanır).")
+        self.canlilik.configure(text=metin, style="Soluk.TLabel" if sessiz < SESSIZ_UYARI_SN else "Uyari.TLabel")
+        if self.calisan_grup and self.canli_kare % 2 == 0:
+            self._menu_boya(self.calisan_grup)
+        self.kok.after(250, self._saat)
+
+    def _calisma_bitti(self):
+        self.calisma_bas = None
+        for d in self.calistir_dugmeleri:
+            d.configure(state="normal")
+        self.durdur_dugmesi.pack_forget()
+        grup, self.calisan_grup = self.calisan_grup, None
+        if grup:
+            self._menu_boya(grup)
+        self._baslik(f"Web Denetim Merkezi {SURUM}")
+        for g in self.listeler:
+            if g == self.etkin_sayfa:
+                self._ayrinti_goster(g)
 
     # ================================================================ hatalar ve uyarılar
     def _sorun_ekle(self, o):
@@ -1409,7 +1515,7 @@ class Uygulama:
                                               "Kayıt klasöründeki dosyaya bakın.")
             return
         self.kaydir_var.set(False)
-        self.alt_defter.select(0)
+        self._ayrintilar(True, 0)
         self.kayit.tag_remove("vurgu", "1.0", "end")
         self.kayit.tag_add("vurgu", f"{isaret} linestart", f"{isaret} lineend+1c")
         self.kayit.see(isaret)
@@ -1459,6 +1565,7 @@ class Uygulama:
                 oge = t.insert(ust, "end", text="    Çalışma kaydı", values=("kayıt", "", "", _kisa_yol(r["kayit"])))
                 self.sonuc_yollari[oge] = r["kayit"]
         basarili = sum(r["sonuc"] == "basarili" for r in sonuclar)
+        durdu = any(r["sonuc"] == "durdu" for r in sonuclar)
         hata = sum(r["hata"] for r in sonuclar)
         uyari = sum(r["uyari"] for r in sonuclar)
         toplam_sure = sum(r["sure_sn"] for r in sonuclar)
@@ -1466,13 +1573,26 @@ class Uygulama:
                       f"toplam {sure_metni(toplam_sure)}")
         self.sonuc_ozet.configure(text=ozet_metni,
                                   style="Kalin.TLabel" if tamam else "Hata.TLabel")
-        self.durum_cubugu.configure(text=("✔ Bitti  ·  " if tamam else "✖ Bitti (hata veya durdurma var)  ·  ")
-                                    + ozet_metni)
+        if tamam:
+            bas, stil, isaret = "Bitti", "CanliBasari.TLabel", "✔"
+        elif durdu:
+            bas, stil, isaret = "Durduruldu", "CanliUyari.TLabel", "■"
+        else:
+            bas, stil, isaret = "Bitti, sorun var", "CanliHata.TLabel", "✖"
+        self.canli.configure(text=isaret, style=stil)
+        self.durum_cubugu.configure(text=f"{bas}  ·  {ozet_metni}")
+        self.canlilik.configure(text="Çıktılar için 'Ayrıntılar' > Son çalışma; raporlar ana sayfada.",
+                                style="Soluk.TLabel")
         calisan = len(sonuclar) / max(self.adim_sayisi or len(sonuclar), 1)
         self.genel_cubugu["value"] = calisan * 1000
         self.genel_yuzde.configure(text=f"%{calisan * 100:.0f} · " + (
             "tamamlandı" if tamam else f"{len(sonuclar)} adım çalıştı, {len(sonuclar) - basarili} sorunlu"))
-        self.alt_defter.select(self.sonuc_sekmesi)
+        self._cubuklari_goster(False)
+        self.gecen_etiketi.configure(text=f"Toplam {sure_metni(toplam_sure)}")
+        if not tamam and not durdu:    # sorun varsa ayrıntılar kendiliğinden açılır
+            self._ayrintilar(True, self.sorun_sekmesi if self.sorun_tablo.get_children() else self.sonuc_sekmesi)
+        else:
+            self.alt_defter.select(self.sonuc_sekmesi)
 
     def _sonuc_ac(self, klasor=False):
         secim = self.sonuc_tablo.selection()

@@ -48,20 +48,26 @@ def izle():
     o = app.son_ilerleme
     if o and o["id"] == "tam_test" and o["oran_adim"] > 0.4 and "calisirken" not in cekildi:
         cekildi.add("calisirken"); cek("05_calisirken")
+        # araç uzun süre çıktı vermezse şeridin nasıl göründüğü (kılavuz için canlandırılır)
+        # kuyruktan gelen çıktı son_hareket'i sıfırlar: yalnız çizim olaylarını işleyip hemen çek
+        gercek = app.son_hareket
+        app.son_hareket = time.monotonic() - 200; app._saat(); kok.update_idletasks()
+        subprocess.run(["import", "-window", "root", str(IMG / "22_sessiz.png")], check=True)
+        app.son_hareket = gercek
     if app.is_parcacigi and app.is_parcacigi.is_alive():
         kok.after(200, izle)
 
 
 def ilk():
-    app._sayfa_ac("web")
-    for i in ("kesif", "tam_test", "belge", "link", "kumeleme", "gorsel", "rota", "teslim"):
-        app._sec_degistir(app.listeler[arayuz.ADIM[i].grup], i)
-    cek("04_secim")
-    app._secilenleri_calistir(); kok.after(300, izle)
+    app._sayfa_ac("ana"); app._durumu_yenile(); kok.after(1200)
+    kok.update(); time.sleep(1); kok.update(); cek("04_siradaki")
+    app._hat(["kesif", "tam_test", "belge", "link", "kumeleme", "gorsel", "rota", "teslim"], "Deneme")
+    kok.after(300, izle)
 
 
 def sonra():
-    cek("06_son_calisma")
+    app._ayrintilar(True, app.sonuc_sekmesi); cek("06_son_calisma")
+    app._ayrintilar(False)
     app._sayfa_ac("ana"); cek("02_ana_sayfa")
     t = app.listeler["web"]; app._sayfa_ac("web"); t.selection_set("tam_test"); t.focus("tam_test")
     app._ayrinti_goster("web"); cek("03_adim_sayfasi")
@@ -77,7 +83,8 @@ def sonra():
 
 
 def son():
-    app.alt_defter.select(app.sorun_sekmesi); cek("07_hatalar")
+    app._ayrintilar(True, app.sorun_sekmesi); cek("07_hatalar")
+    app._ayrintilar(False)
     app._yeni_site(); kok.update(); time.sleep(0.5)
     pencere = [w for w in kok.winfo_children() if isinstance(w, tk.Toplevel)][0]
     kok.update(); subprocess.run(["import", "-window", "root", str(IMG / "14_yeni_site.png")], check=True)

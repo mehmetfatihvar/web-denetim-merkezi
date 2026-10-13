@@ -72,7 +72,9 @@ yoktur, korunur.
 
 ## 2. Arayüz
 
-Pencerenin solunda menü, sağında seçilen sayfa, altında ilerleme paneli ve çalışma kaydı var.
+Pencerenin solunda menü, sağında seçilen sayfa, en altında her zaman görünen **durum şeridi** var.
+Çalıştırmanın iki yolu vardır: ana sayfadaki **Başlat** (sıradaki aşama) ve adım sayfasındaki
+**Çalıştır** (tek adım).
 
 - **Sol menü:**
   - Site profili seçimi ve **Yeni site ekle**.
@@ -84,29 +86,32 @@ Pencerenin solunda menü, sağında seçilen sayfa, altında ilerleme paneli ve 
     görsel kusur, yapay zekâ bulgusu.
   - **Yol haritası:** önerilen sıra (keşif → deneme → tüm site → denetimler → doğrulama →
     yapay zekâ: hazırlık → ilk model → hakem ve rapor → canlı doğrulama → elle etiketleme
-    (sayfa, sonuç) → taşma düzeltme → teslim). Tamamlanan aşamalar ✔ ile işaretlidir. **Sıradaki** aşama tek
-    tıkla başlatılır; yalnız eksik kalan adımlar çalışır.
+    (sayfa, sonuç) → taşma düzeltme → teslim). Tamamlanan aşamalar ✔ ile işaretlidir; satıra
+    tıklamak o aşamanın sayfasını açar.
+  - **Sıradaki adım kartı:** **Başlat** sıradaki aşamayı çalıştırır (yalnız eksik adımlar).
+    **Kalanları da sırayla çalıştır** kalan aşamaları arka arkaya çalıştırır; elle etiketlemede durur.
   - Var olan raporlara kısayollar.
 - **Adım sayfaları:**
   - Solda adım listesi: tahmini süre ve durum (son çıktı zamanı, çalışırken canlı yüzde,
     bitince başarılı/başarısız).
-  - Sağda seçili adımın kartı: açıklama, çıktı dosyaları, **Çalıştır**, **Çıktıyı aç**,
-    **Klasörü aç** ve çalışacak komutu kayda yazma.
-  - Satırın başındaki kutuyla birden fazla adım seçilir. **Seçilenleri çalıştır (n)** ya da
-    **Ctrl+Enter** bunları sırayla çalıştırır. Çift tıklama tek adımı çalıştırır.
-- **Üst çubuk:** Seçilenleri çalıştır, **Tam hat**, **Yapay zekâ hattı**, **Durdur** ve "hata
-  olursa sonraki adımlarla sürdür" anahtarı.
+  - Sağda seçili adımın kartı: açıklama, çıktı dosyaları ve üç düğme: **Çalıştır**, **Sonucu aç**,
+    **Diğer ▾** (adım raporu, klasör, çalışacak komut).
+- **Durum şeridi:** dönen gösterge (program çalışıyorsa döner), çalışan adım ("Adım 2/8"),
+  aracın **son hareket** zamanı, geçen süre, hata/uyarı sayaçları, **Durdur** (yalnız çalışırken)
+  ve **Ayrıntılar** (kayıt, hatalar, son çalışma paneli). Araç 2 dk çıktı vermezse satır sarıya döner
+  ve normal olabileceğini, 10 dk verilmezse takılmış olabileceğini ve ne yapılacağını yazar.
+- "Hata olursa sonraki adımlarla sürdür" seçeneği **Ayarlar > Genel**'dedir.
 
 ### İlerleme, hatalar ve sonuçlar
 
-- **İlerleme paneli** (yalnız çalışırken):
+- **İlerleme** (durum şeridinde, yalnız çalışırken):
   - Çalışan adım, adımın yüzdesi ve işlenen/toplam sayısı (ör. %47,3 · 946/2.000), parça no.
   - **Kalan süre tahmini:** şimdiye kadarki hıza göre hesaplanır.
   - Genel yüzde, geçen süre, hata ve uyarı sayaçları. Pencere başlığında da yüzde görünür.
 - **Hatalar ve uyarılar:** araç çıktısındaki hata dökümleri, `[HATA]` satırları, çıkış kodları,
   açılamayan sayfalar. Çift tıklayınca çalışma kaydında o satıra gidilir.
 - **Çalışma kaydı:** canlı çıktı; hata satırları kırmızı, uyarılar sarı. Kayıtta arama yapılabilir.
-- **Son çalışma:** bitince kendiliğinden açılır. Her adımın durumu, süresi, hata/uyarı sayısı,
+- **Son çalışma** (Ayrıntılar paneli; adım başarısız olursa panel kendiliğinden açılır): Her adımın durumu, süresi, hata/uyarı sayısı,
   **ürettiği çıktı ve raporlar** ve kayıt dosyası; çift tıklayınca açılır.
 - **Hata ayıklama:**
   - Başarısız bir adımın son satırları ve kayıt dosyasının yolu kayda yazılır.
@@ -132,9 +137,11 @@ kısmi sonucu kaydetmesine izin verir, sonra tarayıcılar dahil tüm alt süre�
      - Sunucuyu yormamak için **saniyede istek** değerini düşük tutun.
    - **Tarayıcı dili ve User-Agent.**
    - **Yapay zekâ talimatı:** sitenin İngilizce tanımı (ör. `an e-commerce website`) ve dili.
-   - **Bologna:** OİBS kullanan başka bir üniversitenin Bologna adresi.
-3. Ana sayfadaki yol haritasını izleyin: önce **Site keşfi**, sonra **Deneme testi**, sonra
-   **Tam hat**.
+   - **Bologna:** OİBS kullanan başka bir üniversitenin Bologna adresi (ör. `obs.ornek.edu.tr`;
+     yeni site eklerken de girilebilir). Her üniversitenin verisi veritabanında kendi şemasına
+     yazılır, Mersin Üniversitesi'ninki `public`'tedir.
+3. Ana sayfada **Başlat** ile ilerleyin (keşif → deneme testi → …) ya da **Kalanları da sırayla
+   çalıştır**.
 
 ---
 

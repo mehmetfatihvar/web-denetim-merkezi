@@ -48,6 +48,17 @@ class AyarTestleri(GeciciKlasor):
         self.assertEqual(k.kok, yollar.REPO / "ciktilar" / "ornek-universitesi")
         self.assertEqual(k.veri, k.harita.parent)   # şablonlar haritanın yanına
 
+    def test_yeni_profil_bologna_adresi(self):
+        A.yeni_profil("a", "https://a.com/", klasor=self.profiller)
+        ayar = A.yukle(self.ayar_dosyasi, self.profiller, profil="a")
+        self.assertIn("obs.mersin.edu.tr", ayar["bologna_url"])     # varsayılan: MEÜ
+        A.yeni_profil("b", "https://b.edu.tr/", klasor=self.profiller, bologna_url="obs.b.edu.tr")
+        ayar = A.yukle(self.ayar_dosyasi, self.profiller, profil="b")
+        self.assertEqual(ayar["bologna_url"], "obs.b.edu.tr")
+        self.assertEqual(ayar["bologna_program"], "")                # MEÜ program no'su taşınmaz
+        komut = ADIM["bologna_kesfet"].komutlar(ayar)[-1].argv
+        self.assertEqual(komut[komut.index("--base-url") + 1], "obs.b.edu.tr")
+
     def test_anahtarlar_istenmedikce_kaydedilmez(self):
         A.yeni_profil("a", "https://a.com/", klasor=self.profiller)
         ayar = A.yukle(self.ayar_dosyasi, self.profiller, profil="a")

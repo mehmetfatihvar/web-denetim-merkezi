@@ -41,7 +41,7 @@ tablo(["Kavram", "Anlamı"], [
   ["Site profili", "Bir sitenin bütün ayarları: adres, ad, keşif kuralları, test parametreleri, yapay zekâ talimatındaki site tanımı. `profiller/<ad>.json` dosyasında durur."],
   ["Site haritası", "Test edilecek sayfaların listesi (JSON, `url_list`). Keşif aracı üretir."],
   ["Adım", "Programın çalıştırdığı tek iş (ör. \"Tüm site kanıtlı testi\"). Her adım bir ya da birkaç komut çalıştırır ve dosya üretir. Programda 39 adım vardır."],
-  ["Hat", "Sırayla çalışan adımlar zinciri: **Tam hat**, **Yapay zekâ hattı**."],
+  ["Hat", "Sırayla çalışan adımlar zinciri. Arayüzde ana sayfadaki **Başlat** sıradaki aşamayı, **Kalanları da sırayla çalıştır** kalan aşamaları çalıştırır; komut satırında **tam hat** ve **yapay zekâ hattı** vardır."],
   ["Şablon", "Aynı düzenden üretilen sayfalar (ör. bütün bölümlerin \"program hedefleri\" sayfası). Görsel hatalar çoğunlukla şablona bağlıdır."],
   ["Temsilci", "Bir şablonu (ya da görsel kümeyi) temsilen ayrıntılı denetlenen sayfa."],
   ["Dilim", "Tam sayfa ekran görüntüsünün yapay zekâya tek seferde gönderilen yatay parçası."],
@@ -258,7 +258,7 @@ tablo(["Adım", "Ne yapar", "Kod / çıktı"], [
 ], [1.4, 3.6, 1.6]);
 
 H2("4.10 Bologna aktarımı");
-P("OİBS kullanan üniversitelerin **Bologna Bilgi Paketi**'ni tarayıp ilişkileri koruyarak PostgreSQL'e yazan Go aracıdır (`bologna-scraper/`). Taranan veri: birimler, programlar (önlisans, lisans, yüksek lisans, doktora), program çıktıları, ders planları (yarıyıl, zorunlu/seçmeli, AKTS, seçmeli grup → havuz dersi), ders detayları (amaç, içerik, öğrenme çıktıları, haftalık konular, kaynaklar, değerlendirme, iş yükü) ve **öğrenme çıktısı × program çıktısı katkı matrisi**. Mersin Üniversitesi'nin tamamı (4 seviye, 442 program, eski planlarla 95.432 ders) yaklaşık 3,5 saatte, 0 hatayla tarandı.");
+P("OİBS kullanan üniversitelerin **Bologna Bilgi Paketi**'ni tarayıp ilişkileri koruyarak PostgreSQL'e yazan Go aracıdır (`bologna-scraper/`). Taranan veri: birimler, programlar (önlisans, lisans, yüksek lisans, doktora), program çıktıları, ders planları (yarıyıl, zorunlu/seçmeli, AKTS, seçmeli grup → havuz dersi), ders detayları (amaç, içerik, öğrenme çıktıları, haftalık konular, kaynaklar, değerlendirme, iş yükü) ve **öğrenme çıktısı × program çıktısı katkı matrisi**. Varsayılan site Mersin Üniversitesi'dir; başka bir site `--base-url` (arayüzde profilin **OİBS Bologna adresi**) ile taranır ve her site aynı veritabanında **kendi PostgreSQL şemasına** yazılır (program ve ders kimlikleri siteler arasında çakıştığı için). MEÜ geriye uyum için `public` şemasındadır, diğerlerinin şeması adresten türetilir (`obs.ornek.edu.tr` → `ornek`); `site_info` tablosu şemayı ilk taranan siteye bağlar ve başka bir sitenin aynı şemaya yazılmasını engeller. Mersin Üniversitesi'nin tamamı (4 seviye, 442 program, eski planlarla 95.432 ders) yaklaşık 3,5 saatte, 0 hatayla tarandı.");
 P("Sitenin özelliklerinden doğan tasarım kararları: tablolar ID ile değil önlerindeki başlık metniyle tanınır; ders bağlantıları `onclick` içindedir; eski yıllar ASP.NET form gönderimiyle (ViewState dahil) alınır ve her program kendi oturumunda istenir; ortak seçmeli dersler her programa ayrı kimlikle kopyalandığı için her ders kodu bir kez indirilip kopyalara yazılır (istek sayısı ~30 binden ~4.600'e iner); karakter kodlaması gerekirse windows-1254 kabul edilir; varsayılan 2 istek/sn ve 503/429'da geri çekilme.");
 
 H2("4.11 Teslim paketi");
@@ -322,7 +322,7 @@ const MODULLER = [
   ["merkez/ortam.py", "Ortam kontrolü", "`kontrol`: Python sürümü, eksik paketler, Chromium, Go, Docker; `sorunlar` (kullanıcıya gösterilecek eksikler)."],
   ["merkez/saglayicilar.py", "Sağlayıcı testi", "Anthropic, Gemini, OpenAI uyumlu ve Ollama model listeleme uçlarını çağırır; ayardaki modelin varlığını doğrular."],
   ["merkez/tema.py", "Tema", "Açık/karanlık palet; \"sade\" görünümde clam temasını boyar, \"modern\" görünümde sv-ttk; Windows başlık çubuğu rengi."],
-  ["merkez/arayuz.py", "Masaüstü arayüz", "`Uygulama` sınıfı: sol menü, sayfalar, adım kartları, ilerleme paneli, kayıt/hatalar/son çalışma sekmeleri, ayar formu. Performans için: `_CizimiDondur` (Windows'ta çizimi geçici durdurma), sayfaların üst üste yığılıp öne alınması, durumun arka planda hesaplanması, zaman bütçeli olay kuyruğu."],
+  ["merkez/arayuz.py", "Masaüstü arayüz", "`Uygulama` sınıfı: sol menü, sayfalar, ana sayfadaki sıradaki adım kartı (tek **Başlat**), adım kartları (Çalıştır / Sonucu aç / Diğer), her zaman görünen durum şeridi (dönen gösterge, son hareket süresi ve 2/10 dakikalık sessizlik uyarıları, ilerleme, Durdur), açılır kapanır ayrıntılar paneli (kayıt/hatalar/son çalışma), ayar formu. Performans için: `_CizimiDondur` (Windows'ta çizimi geçici durdurma), sayfaların üst üste yığılıp öne alınması, durumun arka planda hesaplanması, zaman bütçeli olay kuyruğu."],
 ];
 tablo(["Dosya", "Rol", "Ana parçalar"], MODULLER, [1.5, 1.1, 4.2]);
 
@@ -373,7 +373,7 @@ tablo(["Paket", "Sorumluluk"], [
   ["`internal/fetch/`", "HTTP istemcisi: hız sınırı, tekrar deneme, 503/429'da bekleme, çerezler, ASP.NET form gönderimi (postback, ViewState), karakter kodlaması."],
   ["`internal/parse/`", "HTML → Go yapıları, sayfa türü başına bir ayrıştırıcı: birimler, birim tanıtımı, program, ders planı, ders, tablolar, form, metin."],
   ["`internal/scraper/`", "Tarama düzeni: seviye → birim → program → plan yılları → dersler; havuz derslerinin tekilleştirilmesi; devam."],
-  ["`internal/store/`", "PostgreSQL şeması (yabancı anahtarlı tablolar, görünümler), yazma, `scrape_runs`/`scrape_errors`."],
+  ["`internal/store/`", "PostgreSQL şeması (yabancı anahtarlı tablolar, görünümler), yazma, `scrape_runs`/`scrape_errors`; site başına şema (`search_path`) ve `site_info` ile şema sahipliği."],
 ], [1.6, 5]);
 P("Veri modeli: `units` → `programs` → (`program_outcomes`, `program_courses`) → `courses` → (`course_learning_outcomes`, `course_weekly_topics`, `course_resources`, `course_assessments`, `course_workloads`, `course_outcome_matrix`, `course_program_outcomes`). Hazır görünümler: `v_curriculum`, `v_course_lo_po_matrix`, `v_course_outcome_matrix`. Ayrıntılar `bologna-scraper/README.md` ve `RAPOR.md`'de.");
 

@@ -195,7 +195,7 @@ tablo(["Kavram", "Anlamı"], [
   ["Site profili", "Bir sitenin bütün ayarları: adres, ad, keşif kuralları, test parametreleri, yapay zekâ talimatındaki site tanımı. Her site için ayrı profil olur; `profiller/<ad>.json` dosyasında durur."],
   ["Site haritası", "Test edilecek sayfaların listesi (JSON, `url_list`). Site keşfi üretir; ÖİDB için hazır gelir."],
   ["Adım", "Programın çalıştırdığı tek bir iş (ör. \"Tüm site kanıtlı testi\"). Her adım bir ya da birkaç aracı çalıştırır ve dosya üretir."],
-  ["Hat", "Sırayla çalışan adımlar zinciri. **Tam hat** siteyi baştan sona denetler, **Yapay zekâ hattı** görsel denetimi yapar."],
+  ["Sıradaki adım", "Yol haritasında henüz yapılmamış ilk aşama. Ana sayfadaki **Başlat** onu çalıştırır; **Kalanları da sırayla çalıştır** sonraki aşamaları da arka arkaya çalıştırır."],
   ["Şablon / temsilci", "Aynı düzende üretilen sayfalar (ör. bütün haber detayları) bir şablondur. Görsel hatalar şablona bağlı olduğundan her şablondan birkaç temsilci sayfa denetlenir."],
   ["Kanıt", "Her sayfanın masaüstü (1366 px) ve mobil (375 px) tam sayfa ekran görüntüsü."],
   ["Çıktı klasörü", "Bir profilin bütün çıktılarının yazıldığı klasör: `ciktilar/<profil>/`."],
@@ -252,8 +252,9 @@ dikkat("Dosyaları GitHub'dan **tek tek** indirerek güncellemeyin. Program dosy
 // ---- 3. Arayüz
 H1("3. Arayüz");
 H2("3.1 Genel görünüm");
-P("Pencere üç bölümden oluşur: solda **menü**, sağda seçilen **sayfa**, altta **ilerleme paneli** ile **çalışma kaydı / hatalar / son çalışma** sekmeleri. Üst kısımda sayfa başlığı ve çalıştırma düğmeleri bulunur. Sayfa ile alt panel arasındaki çizgi sürüklenerek alanlar büyütülüp küçültülebilir.");
-gorsel("02_ana_sayfa.png", "Ana sayfa: özet kutucukları, yol haritası ve rapor kısayolları");
+P("Pencere üç bölümden oluşur: solda **menü**, sağda seçilen **sayfa**, en altta her zaman görünen **durum şeridi**. Çalışma kaydı, hatalar ve son çalışma sekmeleri şeritteki **Ayrıntılar** düğmesiyle açılan panelde durur; açıkken sayfa ile panel arasındaki çizgi sürüklenerek alanlar büyütülüp küçültülebilir.");
+P("Çalıştırmanın yalnızca iki yolu vardır: ana sayfadaki **Başlat** (sıradaki aşama) ve adım sayfalarındaki **Çalıştır** (tek adım). Başka çalıştır düğmesi, seçim kutusu ya da çift tıklama yoktur.");
+gorsel("04_siradaki.png", "Ana sayfa: Sıradaki adım kartı ve tek Başlat düğmesi; altta durum şeridi");
 
 H2("3.2 Sol menü");
 madde([
@@ -262,49 +263,54 @@ madde([
   "**Tema düğmesi** (en altta): açık ve karanlık tema arasında geçiş. Seçim hatırlanır.",
 ]);
 
-H2("3.3 Üst çubuk");
-tablo(["Düğme", "Ne yapar"], [
-  ["► Seçilenleri çalıştır (n)", "Adım listelerinde işaretlenen adımları programdaki doğal sırayla çalıştırır. Parantezdeki sayı seçili adım sayısıdır. Kısayol: **Ctrl+Enter**."],
-  ["Tam hat", "Siteyi baştan sona denetleyen önerilen sırayı çalıştırır: (harita yoksa site keşfi) → tüm site testi → belge → link → şablon kümeleme → görsel → kırık sayfa doğrulama → buton tıklama doğrulama → teslim. Başlamadan önce listeyi gösterip onay ister."],
-  ["Yapay zekâ hattı", "Görsel denetimin 1–7. aşamalarını sırayla çalıştırır (bkz. 6.5)."],
-  ["■ Durdur", "Çalışan adımı durdurur. Araç önce kısmi sonucunu kaydeder; sonra tarayıcılar dahil bütün alt süreçler kapatılır. Sıradaki adımlar çalışmaz."],
-  ["Hata olursa sonraki adımlarla sürdür", "Kapalıyken bir adım başarısız olursa sonraki adımlar çalışmaz. Açıkken sıradaki adımlarla devam edilir."],
-], [1.4, 4]);
+H2("3.3 Durum şeridi: program çalışıyor mu?");
+P("Pencerenin en altındaki şerit, hangi sayfada olursanız olun programın ne yaptığını gösterir:");
+tablo(["Öğe", "Ne gösterir"], [
+  ["Dönen gösterge (◐ ◓ ◑ ◒)", "Bir adım çalışırken saniyede dört kez döner. Dönüyorsa program açık ve çalışıyordur. Biten çalışmada ✔ (başarılı), ✖ (sorun var) ya da ■ (durduruldu) olur."],
+  ["Çalışıyor · Adım 2/8 · ad", "Çalışan adım ve kaçıncı adım olduğu. Sol menüde o adımın sayfasının yanında da küçük bir dönen gösterge görünür."],
+  ["Son hareket satırı", "Aracın en son ne zaman çıktı verdiği: \"araç az önce çıktı verdi\", \"son hareket 40 sn önce\". **2 dakika** çıktı gelmezse satır sarıya döner ve bunun normal olabileceğini söyler (yapay zekâ, büyük sayfalar). **10 dakika** çıktı gelmezse adımın takılmış olabileceğini ve ne yapılacağını yazar."],
+  ["Geçen süre, Hata, Uyarı", "Çalışmanın süresi ve sayaçlar. Sayaçlara tıklamak hata listesini açar."],
+  ["■ Durdur", "Yalnız çalışırken görünür. Araç önce kısmi sonucunu kaydeder; sonra tarayıcılar dahil bütün alt süreçler kapatılır. Sıradaki adımlar çalışmaz."],
+  ["Ayrıntılar ▴", "Çalışma kaydı, hatalar ve son çalışma panelini açar/kapatır. Bir adım başarısız olursa panel kendiliğinden açılır."],
+  ["Bu adım / Toplam", "Çalışırken iki ilerleme çubuğu: adımın yüzdesi, işlenen/toplam ve kalan süre; bütün çalışmanın yüzdesi."],
+], [1.5, 4]);
+gorsel("22_sessiz.png", "Araç 2 dakikadan uzun süredir çıktı vermediğinde şerit: gösterge dönmeye devam eder, satır sarıya döner", 520);
+P("Hata olunca sonraki adımlarla sürdürmek isterseniz **Ayarlar > Genel > Hata olursa sonraki adımlarla sürdür**'ü açın. Kapalıyken (varsayılan) bir adım başarısız olursa sıradakiler çalışmaz.");
 
 H2("3.4 Ana sayfa");
+gorsel("02_ana_sayfa.png", "Ana sayfa: özet kutucukları, yol haritası ve rapor kısayolları");
 madde([
   "**Özet kutucukları:** site haritasındaki sayfa sayısı, test edilen sayfa ve kapsam, kırık sayfa (4xx/5xx), kırık bağlantı, görsel kusur, kesin yapay zekâ bulgusu. Yalnızca üretilmiş çıktılar için kutucuk görünür.",
-  "**Yol haritası:** önerilen iş sırası. Tamamlanan aşamalar ✓ ile işaretlidir; sıradaki aşama ► ile vurgulanır ve **Sıradaki: çalıştır** düğmesiyle tek tıkla başlatılır. Bir aşama yarım kalmışsa (ör. \"2/4 adım\") yalnızca eksik adımları çalışır.",
-  "**Raporlar:** üretilmiş raporların kısayolları; henüz üretilmemiş raporların düğmesi pasiftir.",
+  "**Sıradaki adım kartı:** en üstte, yol haritasında henüz yapılmamış ilk aşama ve ne yaptığı yazar. **▶ Başlat** onu çalıştırır (bir aşama yarım kalmışsa, ör. \"2/4 adım\", yalnız eksik adımlar çalışır). **Kalanları da sırayla çalıştır** sonraki aşamaları da arka arkaya çalıştırır; başlamadan listeyi gösterip onay ister ve sizin yapmanız gereken elle etiketleme aşamasına gelince durur.",
+  "**Yol haritası:** önerilen iş sırası. Tamamlanan aşamalar ✓, sıradaki ▶ ile işaretlidir. Bir satıra tıklamak o aşamanın adım sayfasını açar.",
+  "**Raporlar:** yalnız üretilmiş raporların kısayolları görünür.",
 ]);
 
 H2("3.5 Adım sayfaları");
 P("Her adım sayfasında solda adımların **listesi**, sağda seçili adımın **ayrıntı kartı** vardır.");
 gorsel("03_adim_sayfasi.png", "Web testi sayfası: adım listesi ve seçili adımın ayrıntı kartı");
 madde([
-  "**Liste sütunları:** seçim kutusu, adım adı, tahmini süre, durum. Durum; son çıktının zamanını, çalışırken canlı yüzdeyi (● %45), bitince sonucu (✓ Başarılı / ✗ Başarısız) gösterir.",
-  "**Seçmek:** satırın başındaki kutuya tıklayın ya da satırdayken **boşluk** tuşuna basın. Birden fazla sayfadan adım seçilebilir; seçim sayfalar arasında korunur.",
-  "**Çalıştırmak:** tek bir adımı satıra çift tıklayarak ya da kartın **► Çalıştır** düğmesiyle; seçilenleri üst çubuktan.",
-  "**Ayrıntı kartı:** adımın açıklaması, ürettiği dosyalar (✓ var / ○ yok), **Çıktıyı aç**, **Klasörü aç**, **Son adım raporunu aç** (bu adımın son çalışmasının raporu; bkz. 7.10) ve **Çalışacak komutu kayda yaz** (adımı çalıştırmadan hangi komutun çalışacağını gösterir).",
+  "**Liste sütunları:** adım adı, tahmini süre, durum. Durum; son çıktının zamanını, çalışırken canlı yüzdeyi (● %45), bitince sonucu (✓ Başarılı / ✗ Başarısız) gösterir.",
+  "**Çalıştırmak:** listeden adımı seçip kartın **▶ Çalıştır** düğmesine basın. Bir çalışma sürerken düğme pasiftir.",
+  "**Ayrıntı kartı:** adımın açıklaması, ürettiği dosyalar (✓ var / ○ yok) ve üç düğme: **▶ Çalıştır**, **Sonucu aç** (adımın ana çıktısı) ve **Diğer ▾**. Diğer menüsünde **Son adım raporu** (bkz. 7.10), **Klasörü aç** ve **Çalışacak komutu göster** (adımı çalıştırmadan hangi komutun çalışacağını kayda yazar) bulunur.",
 ]);
-gorsel("04_secim.png", "Birden fazla adım seçildiğinde üstteki düğme seçim sayısını gösterir");
 
-H2("3.6 Alt panel: ilerleme, kayıt, hatalar, son çalışma");
-H3("İlerleme paneli");
-P("Bir çalışma başlayınca alt panelde iki ilerleme çubuğu görünür:");
+H2("3.6 Ayrıntılar paneli: ilerleme, kayıt, hatalar, son çalışma");
+H3("İlerleme");
+P("Bir çalışma başlayınca durum şeridinde iki ilerleme çubuğu görünür:");
 madde([
   "**Bu adım:** çalışan adımın yüzdesi, işlenen/toplam sayısı (ör. 946/2.000), parçalı testte kaçıncı parça olduğu ve **kalan süre tahmini**. Tahmin son 10 dakikadaki hıza göre yapılır, sunucu yavaşlar ya da hızlanırsa kendini günceller. Sayfalar eşzamanlı test edildiği için sayı, listedeki sıra değil bitirilen sayfa sayısıdır; tam testte zaten yapılmış olduğu için atlanan parçalar hız hesabına katılmaz.",
   "**Toplam:** seçilen bütün adımların genel yüzdesi.",
-  "Sağ üstte **geçen süre**, kırmızı **Hata** ve sarı **Uyarı** sayaçları. Sayaçlara tıklamak hata listesini açar. Pencere başlığında da genel yüzde görünür.",
+  "Sağda **geçen süre**, kırmızı **Hata** ve sarı **Uyarı** sayaçları. Sayaçlara tıklamak hata listesini açar. Pencere başlığında da genel yüzde görünür.",
 ]);
-gorsel("05_calisirken.png", "Tüm site testi çalışırken: adım ve toplam ilerlemesi, kalan süre, canlı kayıt");
+gorsel("05_calisirken.png", "Tüm site testi çalışırken: dönen gösterge, son hareket, adım ve toplam ilerlemesi, kalan süre");
 H3("Çalışma kaydı");
 P("Araçların canlı çıktısıdır. Hata satırları kırmızı, uyarılar sarı görünür. **Kayıtta ara** ile metin aranır. **Yeni satırları takip et** kapatılırsa eski satırlar kaymadan okunur. Her adımın tam kaydı ayrıca `ciktilar/<profil>/merkez_kayitlari/` klasörüne tarih ve adım adıyla yazılır (**Kayıt klasörü** düğmesi).");
 H3("Hatalar ve uyarılar");
 P("Araç çıktısında yakalanan hatalar (Python hata dökümü, `[HATA]` satırları, sıfır olmayan çıkış kodu, bulunamayan program) ve uyarılar (`[!]` satırları, açılamayan ya da zaman aşımına uğrayan sayfa) saat ve adım adıyla listelenir. Satıra **çift tıklamak** çalışma kaydında o satıra gider ve vurgular. **Panoya kopyala** listeyi destek istemek için kopyalar.");
 gorsel("07_hatalar.png", "Hatalar ve uyarılar sekmesi");
 H3("Son çalışma");
-P("Bir çalışma bitince kendiliğinden açılır: her adımın durumu, süresi, hata/uyarı sayısı, **ürettiği çıktı ve raporlar** ve kayıt dosyası. Bir satıra çift tıklamak dosyayı açar; **Bulunduğu klasör** klasörü açar; **Teslim paketi oluştur** paketi hazırlar.");
+P("**Ayrıntılar > Son çalışma** sekmesindedir: her adımın durumu, süresi, hata/uyarı sayısı, **ürettiği çıktı ve raporlar** ve kayıt dosyası. Bir satıra çift tıklamak dosyayı açar; **Bulunduğu klasör** klasörü açar; **Teslim paketi oluştur** paketi hazırlar.");
 gorsel("06_son_calisma.png", "Son çalışma sekmesi: adımlar, süreler ve üretilen dosyalar");
 P("Her adımın altındaki ilk satır **Adım raporu**dur: o adımın bu çalışmadaki sonucunu tek sayfada gösterir (bkz. 7.10).");
 
@@ -312,9 +318,6 @@ H2("3.7 Tema ve kısayollar");
 P("Sol alttaki düğme açık ve karanlık tema arasında geçiş yapar. Varsayılan **sade görünüm** hızlı çizilir. İsteyen **Ayarlar → Genel → Arayüz görünümü** ile Windows 11 tarzı **modern** görünümü (`sv-ttk`) seçebilir; ancak bu tema her öğeyi resimle çizdiği için Windows'ta sayfa geçişleri ve tema değişimi belirgin yavaşlar (ölçümde 5–7 kat). Değişiklik program yeniden açılınca geçerli olur.");
 gorsel("15_karanlik_tema.png", "Karanlık tema", 520);
 tablo(["Kısayol", "İşlev"], [
-  ["Ctrl+Enter", "Seçilen adımları çalıştır"],
-  ["Boşluk (adım listesinde)", "Satırdaki adımı seç / seçimi kaldır"],
-  ["Çift tıklama (adım listesinde)", "Adımı tek başına çalıştır"],
   ["F5", "Durum ve özetleri yenile"],
   ["Enter (arama kutusunda)", "Kayıtta önceki eşleşmeyi bul"],
 ], [1.6, 3]);
@@ -327,9 +330,9 @@ P("`meu-oidb` profili Mersin Üniversitesi ÖİDB ön-prodüksiyon sitesi (`http
 H2("4.2 Yeni site eklemek");
 sirali([
   "Sol menüde **+ Yeni site ekle**'ye basın.",
-  "**Başlangıç adresi** (ör. `https://www.ornek.edu.tr/`), **profil adı** ve raporlarda görünecek **site adı**nı girip **Oluştur**'a basın.",
+  "**Başlangıç adresi** (ör. `https://www.ornek.edu.tr/`), **profil adı** ve raporlarda görünecek **site adı**nı girin. Üniversite OİBS kullanıyorsa **OİBS Bologna adresi**'ni de yazabilirsiniz (ör. `obs.ornek.edu.tr`; boş bırakılırsa Mersin Üniversitesi). **Oluştur**'a basın.",
   "Yeni profil seçili olarak açılır. Çıktıları `ciktilar/<profil>/` altında toplanır; diğer sitelerin verileri etkilenmez.",
-  "Ana sayfadaki yol haritasını izleyin: önce **Site keşfi**, sonra **Deneme testi**, sonra **Tam hat**.",
+  "Ana sayfadaki **Başlat** ile ilerleyin: önce site keşfi, sonra deneme testi, sonra tüm site testi ve denetimler.",
 ]);
 gorsel("14_yeni_site.png", "Yeni site ekleme penceresi", 520);
 H2("4.3 Profil ayarlarını siteye göre düzenlemek");
@@ -364,10 +367,10 @@ tablo(["#", "Aşama", "Neden bu sırada?"], [
   ["13", "Teslim paketi", "Bütün çıktılar tek klasörde toplanır."],
 ], [0.3, 1.6, 4]);
 
-H2("5.2 Hatlar");
-P("**Tam hat** adımları:");
+H2("5.2 Arka arkaya çalıştırmak");
+P("Ana sayfadaki **Kalanları da sırayla çalıştır**, sıradaki aşamadan başlayıp yol haritasının kalanını arka arkaya çalıştırır. Önce çalışacak adımların listesini gösterip onay ister. Elle etiketleme (10–11) sizin işiniz olduğu için oraya gelince durur; etiketlemeyi bitirip yine **Başlat**'a basın.");
+P("Komut satırından aynı zincirler `--calistir tam-hat` ve `--calistir ai-hatti` ile çalıştırılabilir (bkz. 10). **Tam hat** adımları:");
 sirali(VERI.tam_hat.map((i) => `${ADIM[i].ad}`));
-P("Site haritası henüz yoksa (yeni site) tam hat **site keşfi** ile başlar.");
 P("**Yapay zekâ hattı** adımları:");
 sirali(VERI.ai_hatti.map((i) => `${ADIM[i].ad}`));
 
@@ -379,7 +382,8 @@ madde([
   "Ücretsiz Gemini kotası günlük dolarsa yapay zekâ analizi durur; ertesi gün aynı adımı çalıştırın.",
   "**Hata alan istekler de yeniden denenir.** Yapay zekâ analizi yalnız başarılı cevapları \"yapıldı\" sayar. Sunucu hatası (ör. Gemma 500), zaman aşımı ya da kota hatası alan istekler aynı çalıştırmada otomatik olarak **2 tur daha** denenir (kayıtta \"Yeniden deneme turu 1/2\"); adım sonradan tekrar çalıştırılırsa yine yalnız yapılamayanlar gönderilir.",
   "**İlk model ve hakem ayrı aşamalardır.** 3b bitince kayda kapsam yazılır: \"İlk model (gemini:gemma-4-31b-it): 3990/4084 dilim tamam, 94 yapılamadı\". Hiç denenmemiş (yarıda kalmış) ya da kota yüzünden yapılamamış dilim varsa 3b **başarısız** biter (\"İlk model tamamlanmadı\") ve hat hakeme geçmez; 3b'yi tekrar çalıştırın. 3c de başlamadan aynı kontrolü yapar. 3 denemede de yapılamayan dilimler (Gemma 500, zaman aşımı) ise hakeme gider; denetimsiz kalmaz.",
-  "**Çalıştığını nasıl anlarım?** Kayda yalnız hata alan istekler tek tek yazılır; başarılı cevaplar sessizce `sonuclar.jsonl` dosyasına kaydedilir. Her 20 istekte bir `[340/3792] ✓ 270 başarılı  ✗ 70 yapılamadı  ~906 dk kaldı` gibi bir ilerleme satırı çıkar. Gemma yavaş olduğu için iki satır arası 8–15 dakika sürebilir. Cevap vermeyen bir bağlantı 5 dakikada zaman aşımına uğrar ve yeniden denenir, yani istek asılı kalmaz. 30 dakikadan uzun süre yeni satır gelmezse (ör. bilgisayar uykuya geçtiyse) adımı durdurup yeniden başlatın; tamamlananlar atlanır.",
+  "**Program çalışıyor mu?** Durum şeridindeki gösterge dönüyorsa program açıktır; \"son hareket\" satırı aracın en son ne zaman çıktı verdiğini söyler (bkz. 3.3).",
+  "**Yapay zekâ analizinin çalıştığını nasıl anlarım?** Kayda yalnız hata alan istekler tek tek yazılır; başarılı cevaplar sessizce `sonuclar.jsonl` dosyasına kaydedilir. Her 20 istekte bir `[340/3792] ✓ 270 başarılı  ✗ 70 yapılamadı  ~906 dk kaldı` gibi bir ilerleme satırı çıkar. Gemma yavaş olduğu için iki satır arası 8–15 dakika sürebilir. Cevap vermeyen bir bağlantı 5 dakikada zaman aşımına uğrar ve yeniden denenir, yani istek asılı kalmaz. 30 dakikadan uzun süre yeni satır gelmezse (ör. bilgisayar uykuya geçtiyse) adımı durdurup yeniden başlatın; tamamlananlar atlanır.",
 ]);
 
 H2("5.4 Örnek senaryolar");
@@ -387,15 +391,15 @@ H3("ÖİDB sitesinin tamamını denetlemek");
 sirali([
   "Profil: `meu-oidb`. Gerekirse VPN'e bağlanın.",
   "**Web testi > Deneme testi** ile bağlantıyı kontrol edin.",
-  "**Tam hat**'ı çalıştırın (harita hazır olduğu için keşif atlanır).",
-  "Yapay zekâ anahtarını girip **Yapay zekâ hattı**'nı çalıştırın; kota dolarsa ertesi gün sürdürün.",
+  "Ana sayfada **Kalanları da sırayla çalıştır**'a basın (harita hazır olduğu için keşif atlanır). Yapay zekâ aşamalarından önce Ayarlar'a anahtarı girin.",
+  "Yapay zekâ kotası dolarsa ertesi gün **Başlat** ile sürdürün; elle etiketleme aşamasında etiketlemeyi yapıp yeniden **Başlat**'a basın.",
   "**Doğrula ve düzelt > 10. Otomatik taşma düzeltme** ile CSS önerisi alın; **Teslim > Teslim paketini oluştur**.",
 ]);
 H3("Yeni bir siteyi ilk kez denetlemek");
 sirali([
   "**+ Yeni site ekle** ile profil oluşturun.",
   "**Hazırlık > Site keşfi**'ni çalıştırın; kayıtta \"haritaya N sayfa yazıldı\" satırını kontrol edin. Sayı beklenenden çok büyükse hariç desenleri ve sorgu sınırını ayarlayıp keşfi **Taze** başlatın (aynı adım kaldığı yerden devam eder; baştan başlamak için `ciktilar/<profil>/kesif/` klasörünü silin).",
-  "**Deneme testi**, ardından **Tam hat**.",
+  "**Başlat** ile deneme testine, ardından **Kalanları da sırayla çalıştır** ile kalan aşamalara geçin.",
 ]);
 H3("Yalnızca taşma düzeltme önerisi almak");
 P("Herhangi bir site için profil oluşturup doğrudan **Doğrula ve düzelt > 10. Otomatik taşma düzeltme**'yi çalıştırmak yeterlidir. Site haritası yoksa araç sayfaları sitemap.xml'den ya da linkleri izleyerek kendisi bulur. Çıktı `oneri.css` ve önce/sonra görüntüleridir.");
@@ -673,7 +677,14 @@ sirali([
   "Tamamı için **Tüm siteyi tara** (~3,5 saat). Yarıda kalırsa **Kesilen taramayı sürdür**.",
   "**Veritabanı istatistikleri** ile tablo kayıt sayılarını görün. Veritabanı adresi: `postgres://bologna:bologna@localhost:5432/bologna` (DBeaver, pgAdmin ile bağlanılabilir).",
 ]);
-P("Başka bir üniversite için profilde **OİBS Bologna adresi**'ni değiştirin. Veri modeli, örnek SQL sorguları ve ayrıntılar: `bologna-scraper/README.md`.");
+H2("Başka üniversiteler");
+P("Varsayılan site Mersin Üniversitesi'dir. Aynı OİBS altyapısını kullanan başka bir üniversite için profilde (Ayarlar > Site profili > **OİBS Bologna adresi**) ya da yeni site eklerken adresi girin; yalnızca alan adı yeter (ör. `obs.ornek.edu.tr`). Sonra **Programları listele** ile program numaralarını görüp **Program no**'ya yazın ve **Tek program tara** ile deneyin.");
+madde([
+  "**Veriler karışmaz:** her üniversite aynı veritabanında kendi **şemasına** yazılır. Mersin Üniversitesi `public` şemasındadır; diğerlerinin şeması adresten türetilir (`obs.ornek.edu.tr` → `ornek`). SQL'de `SET search_path TO ornek;` ya da `ornek.courses` biçiminde sorgulanır. **Veritabanı istatistikleri** hangi site ve şemaya baktığını en üstte yazar.",
+  "Bir şemaya başka bir sitenin verisi yazılmak istenirse araç durur ve hata verir.",
+  "Parser Mersin Üniversitesi sayfalarıyla doğrulanmıştır. Sayfalarını özelleştirmiş bir üniversitede bazı alanlar boş gelebilir; önce tek programla deneyin.",
+]);
+P("Veri modeli, örnek SQL sorguları ve ayrıntılar: `bologna-scraper/README.md`.");
 
 // ---- Ek B
 H1("Ek B. Geliştirme notları");
