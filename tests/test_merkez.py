@@ -636,7 +636,7 @@ class SozlesmeTestleri(unittest.TestCase):
                     for arg in k.argv:
                         m = re.fullmatch(r"--([a-z][a-z0-9-]*)", arg)
                         if m and k.argv[0] != "go" and f'"{m.group(1)}"' not in kaynak \
-                                and m.group(1) != "profile" and m.group(1) != "rm":
+                                and m.group(1) not in ("profile", "rm", "build"):   # docker compose seçenekleri
                             eksikler.append(f"{adim.id}: --{m.group(1)}")
         self.assertEqual(sorted(set(eksikler)), [])
 

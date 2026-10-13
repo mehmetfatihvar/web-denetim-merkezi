@@ -63,6 +63,8 @@ Veritabanı bağlantısı: `postgres://bologna:bologna@localhost:5432/bologna`. 
 bağlanabilirsiniz. Bilgisayarınızda 5432 portunu kullanan başka bir PostgreSQL varsa `docker-compose.yml`
 içindeki `"5432:5432"` satırını `"5433:5432"` yapın.
 
+Kodu güncelledikten sonra imajı yenilemek için komutlara `--build` ekleyin (`docker compose --profile scrape run --build --rm scraper ...`); program bunu kendisi yapar.
+
 Kapatmak için: `docker compose down`. Verileri de silmek için: `docker compose down -v`.
 
 ---

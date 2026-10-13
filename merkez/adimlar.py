@@ -130,7 +130,8 @@ def _bologna(ayar, *argumanlar, aciklama=""):
     argumanlar = (*argumanlar, "--base-url", ayar["bologna_url"],
                   *(["-v"] if ayar.get("ayrintili") else []))
     if ayar["bologna_mod"] == "docker":
-        return [Komut(["docker", "compose", "--profile", "scrape", "run", "--rm", "scraper",
+        # --build: kod güncellenince imaj da yenilensin (değişiklik yoksa önbellekten, saniyeler)
+        return [Komut(["docker", "compose", "--profile", "scrape", "run", "--build", "--rm", "scraper",
                        *argumanlar], cwd=yollar.BOLOGNA, aciklama=aciklama)]
     ikili = str(Path("bin") / ("bologna.exe" if WINDOWS else "bologna"))
     return [
