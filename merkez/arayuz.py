@@ -706,8 +706,9 @@ class Uygulama:
     # ================================================================ adım sayfaları
     def _grup_sayfasi(self, grup):
         f = ttk.Frame(self.icerik)
-        f.columnconfigure(0, weight=3)
-        f.columnconfigure(1, weight=2)
+        # uniform: liste ve kart hep 3:2 bölünür; seçilen adımın metni kartın genişliğini oynatmaz
+        f.columnconfigure(0, weight=3, uniform="adim")
+        f.columnconfigure(1, weight=2, uniform="adim")
         f.rowconfigure(0, weight=1)
 
         sol = ttk.Frame(f)

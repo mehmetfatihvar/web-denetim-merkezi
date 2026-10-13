@@ -93,6 +93,68 @@ def uygula(kok: tk.Tk, ad: str, hizli: bool = False) -> dict:
     return p
 
 
+_ONAY_RESIMLERI = {}   # kök pencere -> (boş, işaretli, üzerinde): tema değişince yerinde boyanır
+
+
+def _karistir(a: str, b: str, oran: float) -> str:
+    oran = min(max(oran, 0.0), 1.0)
+    ra, ga, ba = (int(a[i:i + 2], 16) for i in (1, 3, 5))
+    rb, gb, bb = (int(b[i:i + 2], 16) for i in (1, 3, 5))
+    return "#%02x%02x%02x" % (round(ra + (rb - ra) * oran), round(ga + (gb - ga) * oran),
+                              round(ba + (bb - ba) * oran))
+
+
+def _onay_boya(resim: tk.PhotoImage, n: int, zemin: str, kenar: str, isaret: str = None):
+    """n×n kutu (1 px kenar); isaret verilirse içine yumuşak kenarlı ✓ çizer."""
+    t = max(1.6, n / 7)                                  # çizgi kalınlığı
+    noktalar = [(0.24 * n, 0.53 * n), (0.43 * n, 0.71 * n), (0.77 * n, 0.31 * n)]
+
+    def uzaklik(x, y):
+        en = 1e9
+        for (x1, y1), (x2, y2) in zip(noktalar, noktalar[1:]):
+            dx, dy = x2 - x1, y2 - y1
+            k = max(0.0, min(1.0, ((x - x1) * dx + (y - y1) * dy) / (dx * dx + dy * dy)))
+            en = min(en, ((x - x1 - k * dx) ** 2 + (y - y1 - k * dy) ** 2) ** 0.5)
+        return en
+
+    satirlar = []
+    for y in range(n):
+        satir = []
+        for x in range(n):
+            if x in (0, n - 1) or y in (0, n - 1):
+                renk = kenar
+            elif isaret:
+                renk = _karistir(zemin, isaret, t / 2 + 0.5 - uzaklik(x + 0.5, y + 0.5))
+            else:
+                renk = zemin
+            satir.append(renk)
+        satirlar.append("{" + " ".join(satir) + "}")
+    resim.put(" ".join(satirlar), to=(0, 0))
+
+
+def _onay_kutusu(s: ttk.Style, p: dict):
+    """clam'in çarpılı (☒) kutusu yerine işaretliyken vurgu renginde ✓; ölçeklemeye göre boyutlanır."""
+    kok = s.master
+    if kok not in _ONAY_RESIMLERI:
+        n = max(13, round(tkfont.nametofont("TkDefaultFont").metrics("linespace") * 0.8))
+        resimler = tuple(tk.PhotoImage(master=kok, width=n + 7, height=n) for _ in range(3))  # sağ 7 px boşluk
+        _ONAY_RESIMLERI[kok] = (n, resimler)
+        bos, isaretli, uzerinde = resimler
+        try:
+            s.element_create("Onay.indicator", "image", bos, ("selected", isaretli),
+                             ("active", uzerinde), sticky="w")
+        except tk.TclError:
+            pass
+    n, (bos, isaretli, uzerinde) = _ONAY_RESIMLERI[kok]
+    _onay_boya(bos, n, p["kart"], p["soluk"])
+    _onay_boya(uzerinde, n, p["secili"], p["vurgu"])
+    _onay_boya(isaretli, n, p["vurgu"], p["vurgu"], p["vurgu_metin"])
+    s.layout("TCheckbutton", [("Checkbutton.padding", {"sticky": "nswe", "children": [
+        ("Onay.indicator", {"side": "left", "sticky": ""}),
+        ("Checkbutton.focus", {"side": "left", "sticky": "w", "children": [
+            ("Checkbutton.label", {"sticky": "nswe"})]})]})])
+
+
 def _clam_boya(s: ttk.Style, p: dict):
     """sv-ttk yokken: clam temasını aynı paletle boya ve sv-ttk stil adlarını tanımla."""
     s.theme_use("clam")
@@ -119,6 +181,7 @@ def _clam_boya(s: ttk.Style, p: dict):
                 bordercolor=p["soluk"], lightcolor=p["kart"], darkcolor=p["kart"])
     s.map("TCheckbutton", background=[("active", p["bg"])],
           indicatorbackground=[("selected", p["vurgu"]), ("active", p["secili"])])
+    _onay_kutusu(s, p)
     # İnce, düz kaydırma çubukları
     for yon in ("Vertical", "Horizontal"):
         s.configure(f"{yon}.TScrollbar", background=p["kenar"], troughcolor=p["bg"],

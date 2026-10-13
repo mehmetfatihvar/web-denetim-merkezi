@@ -1,5 +1,11 @@
 # Değişiklikler
 
+## 1.3.1 (Ekim 2026)
+
+- Sade görünümde onay kutuları işaretliyken çarpı (☒) yerine vurgu renginde ✓ gösterir; ekran
+  ölçeklemesine göre boyutlanır.
+- Adım sayfalarında ayrıntı kartının genişliği, seçilen adıma göre değişmez (liste ve kart hep 3:2).
+
 ## 1.3 (Ekim 2026)
 
 - Her adım sayfasında **Bu sayfadakileri sırayla çalıştır…**: sayfadaki adımlar işaretli bir listede
