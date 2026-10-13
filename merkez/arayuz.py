@@ -4,8 +4,8 @@ Düzen: solda menü (profil, sayfalar, tema), sağda sayfa içeriği; en altta h
 durum şeridi (çalışırken canlılık göstergesi, ilerleme, Durdur) ve isteğe göre açılan ayrıntılar
 (çalışma kaydı / hatalar / son çalışma). Görünüm `tema.py`'de.
 
-Kullanım ilkesi: bir şeyi başlatmanın iki yolu vardır. Ana sayfada sıradaki aşama (Başlat),
-adım sayfalarında seçili adım (Çalıştır).
+Kullanım ilkesi: ana sayfada sıradaki aşama (Başlat); adım sayfalarında seçili adım (Çalıştır) ya da
+sayfadaki adımlar, önerilenler işaretli bir listeden (Bu sayfadakileri sırayla çalıştır).
 """
 
 import os
@@ -158,6 +158,18 @@ SAYFA_ACIKLAMA = {
                 "düzeltmesi üretilip denenir. Site değişmez; CSS yalnız tarayıcı sekmesine eklenir.",
 }
 ELLE_ASAMALAR = {"gd_etiket", "gd_etiket_ozet"}
+# "Bu sayfadakileri sırayla çalıştır" penceresinde önceden işaretli adımlar (sayfanın olağan akışı).
+# Yazılmayan sayfada hepsi işaretlidir. Aynı işi iki kez yapan ya da isteğe bağlı adımlar işaretsiz gelir.
+SAYFA_AKISI = {
+    "hazirlik": ["ortam", "kesif"],
+    "web": ["tam_test", "hatali_tekrar"],
+    "ai": ["ai_tarama", "ai_temsilci", "ai_yeniden", "ai_analiz", "ai_hakem", "ai_isabet", "ai_metin",
+           "ai_rapor"],
+    "duzeltme": ["gd_dogrulama", "gd_oto", "gd_css"],
+    "bologna": ["bologna_db", "bologna_tumu", "bologna_istatistik"],
+}
+# Çalışma sırası listedekinden farklı olan sayfalar (9. adım 10.'nun önerisini dener)
+SAYFA_SIRASI = {"duzeltme": ["gd_dogrulama", "gd_etiket", "gd_etiket_ozet", "gd_oto", "gd_css"]}
 CANLI_KARE = "◐◓◑◒"
 SESSIZ_UYARI_SN, SESSIZ_CIDDI_SN = 120, 600
 DURUM_YAZI = {"baslangic": "● Çalışıyor", "basarili": "✔ Başarılı", "hatali": "✖ Başarısız",
@@ -709,6 +721,13 @@ class Uygulama:
             t.insert("", "end", iid=adim.id, values=(adim.ad, adim.sure or "", ""))
         kc = ttk.Scrollbar(sol, command=t.yview)
         t.configure(yscrollcommand=kc.set)
+        if len(grup_adimlari(grup)) > 1:
+            alt = ttk.Frame(sol)
+            alt.pack(side="bottom", fill="x", pady=(8, 0))
+            hepsi = ttk.Button(alt, text="▶▶  Bu sayfadakileri sırayla çalıştır…",
+                               command=lambda g=grup: self._sayfayi_calistir(g))
+            hepsi.pack(side="left")
+            self.calistir_dugmeleri.append(hepsi)
         t.pack(side="left", fill="both", expand=True)
         kc.pack(side="right", fill="y")
         t.bind("<<TreeviewSelect>>", lambda _, g=grup: self._ayrinti_goster(g))
@@ -1037,8 +1056,11 @@ class Uygulama:
                              insertbackground=p["konsol_metin"])
         self.kayit.tag_configure("hata", foreground="#ff7b72")
         self.kayit.tag_configure("uyari", foreground="#e3b341")
-        for kc in KaydirmaliCerceve.hepsi:
-            kc.renk(p["bg"])
+        for kc in list(KaydirmaliCerceve.hepsi):
+            try:
+                kc.renk(p["bg"])
+            except tk.TclError:          # kapanmış bir pencereden kalan çerçeve
+                KaydirmaliCerceve.hepsi.remove(kc)
         for tur, w in self.alanlar.values():
             if tur == "cok":
                 w.configure(background=p["kart"], foreground=p["metin"], insertbackground=p["metin"])
@@ -1206,6 +1228,59 @@ class Uygulama:
         self._profil_degisti()
 
     # ================================================================ çalıştırma
+    def _sayfayi_calistir(self, grup):
+        """Sayfadaki adımları işaretli bir listede gösterir; seçilenleri sırayla çalıştırır."""
+        ids = SAYFA_SIRASI.get(grup) or [a.id for a in grup_adimlari(grup)]
+        onerilen = set(SAYFA_AKISI.get(grup, ids))
+        ad = dict(GRUPLAR)[grup]
+        p = tk.Toplevel(self.kok)
+        p.title(f"{ad}: sırayla çalıştır")
+        p.transient(self.kok)
+        p.resizable(False, False)
+        p.configure(background=self.p["bg"])
+        cer = ttk.Frame(p, padding=20)
+        cer.pack(fill="both")
+        ttk.Label(cer, text=f"{ad}: sırayla çalıştır", style="AltBaslik.TLabel").pack(anchor="w")
+        ttk.Label(cer, text="İşaretli adımlar aşağıdaki sırayla çalışır. Önerilenler işaretli geldi; "
+                            "isterseniz değiştirin.", style="Soluk.TLabel", wraplength=480,
+                  justify="left").pack(anchor="w", pady=(2, 10))
+        secim = {}
+        for i in ids:
+            adim = ADIM[i]
+            v = tk.BooleanVar(value=i in onerilen)
+            metin = adim.ad + (f"   ({adim.sure})" if adim.sure else "")
+            if i in ELLE_ASAMALAR:
+                metin += "   · etiketleme sizde"
+            ttk.Checkbutton(cer, text=metin, variable=v).pack(anchor="w", pady=2)
+            secim[i] = v
+        if ELLE_ASAMALAR & set(ids):
+            ttk.Label(cer, text="8b, 8a'dan sonra siz etiketlemeyi yapınca ayrıca çalıştırılır; ikisi "
+                                "birlikte seçilirse 8b çıkarılır.", style="Soluk.TLabel", wraplength=480,
+                      justify="left").pack(anchor="w", pady=(8, 0))
+
+        def baslat(_=None):
+            secilen = [i for i in ids if secim[i].get()]
+            if "gd_etiket" in secilen and "gd_etiket_ozet" in secilen:
+                secilen.remove("gd_etiket_ozet")
+            if not secilen:
+                messagebox.showinfo("Seçim yok", "En az bir adım işaretleyin.", parent=p)
+                return
+            p.destroy()
+            self._baslat(secilen)
+
+        d = ttk.Frame(cer)
+        d.pack(anchor="e", pady=(16, 0))
+        ttk.Button(d, text="Vazgeç", command=p.destroy).pack(side="left", padx=6)
+        ttk.Button(d, text="▶  Başlat", style="Accent.TButton", command=baslat).pack(side="left")
+        p.bind("<Return>", baslat)
+        p.bind("<Escape>", lambda _: p.destroy())
+        p.update_idletasks()             # ana pencerenin ortasında aç
+        x = self.kok.winfo_rootx() + (self.kok.winfo_width() - p.winfo_reqwidth()) // 2
+        y = self.kok.winfo_rooty() + (self.kok.winfo_height() - p.winfo_reqheight()) // 3
+        p.geometry(f"+{max(x, 0)}+{max(y, 0)}")
+        p.grab_set()
+        return p, secim, baslat
+
     def _hat(self, ids, baslik="Çalıştır"):
         if len(ids) > 1:
             adlar = "\n".join(f"  {i + 1}. {ADIM[a].ad}" for i, a in enumerate(ids))

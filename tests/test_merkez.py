@@ -740,6 +740,33 @@ class ArayuzTestleri(GeciciKlasor):
             kok.destroy()
         self.assertEqual(hatalar, [])
 
+    def test_sayfadakileri_calistir(self):
+        import tkinter as tk
+        from merkez import arayuz
+        from merkez.adimlar import grup_adimlari
+        for grup, ids in list(arayuz.SAYFA_AKISI.items()) + list(arayuz.SAYFA_SIRASI.items()):
+            self.assertTrue(set(ids) <= {a.id for a in grup_adimlari(grup)}, grup)
+        self.assertEqual(sorted(arayuz.SAYFA_SIRASI["duzeltme"]),
+                         sorted(a.id for a in grup_adimlari("duzeltme")))
+        ayar = A.yukle(self.ayar_dosyasi, self.profiller)
+        ayar["cikti_koku"] = str(self.t / "cikti")
+        kok = tk.Tk()
+        try:
+            app = arayuz.Uygulama(kok, ayar)
+            calisan = []
+            app._baslat = calisan.append
+            p, secim, baslat = app._sayfayi_calistir("web")
+            self.assertEqual([i for i, v in secim.items() if v.get()], ["tam_test", "hatali_tekrar"])
+            baslat()
+            self.assertEqual(calisan[-1], ["tam_test", "hatali_tekrar"])
+            p, secim, baslat = app._sayfayi_calistir("duzeltme")
+            secim["gd_etiket"].set(True)
+            secim["gd_etiket_ozet"].set(True)
+            baslat()   # 8a ile 8b birlikte çalışmaz; 9, 10'dan sonra
+            self.assertEqual(calisan[-1], ["gd_dogrulama", "gd_etiket", "gd_oto", "gd_css"])
+        finally:
+            kok.destroy()
+
 
 class DenetimRaporuTestleri(GeciciKlasor):
     """Kırık link / belge CSV'lerinden okunabilir rapor."""

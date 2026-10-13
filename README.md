@@ -73,8 +73,8 @@ yoktur, korunur.
 ## 2. Arayüz
 
 Pencerenin solunda menü, sağında seçilen sayfa, en altında her zaman görünen **durum şeridi** var.
-Çalıştırmanın iki yolu vardır: ana sayfadaki **Başlat** (sıradaki aşama) ve adım sayfasındaki
-**Çalıştır** (tek adım).
+Çalıştırmanın üç yolu vardır: ana sayfadaki **Başlat** (sıradaki aşama), adım sayfasındaki
+**Çalıştır** (tek adım) ve **Bu sayfadakileri sırayla çalıştır…** (o sayfanın adımları).
 
 - **Sol menü:**
   - Site profili seçimi ve **Yeni site ekle**.
@@ -96,6 +96,8 @@ Pencerenin solunda menü, sağında seçilen sayfa, en altında her zaman görü
     bitince başarılı/başarısız).
   - Sağda seçili adımın kartı: açıklama, çıktı dosyaları ve üç düğme: **Çalıştır**, **Sonucu aç**,
     **Diğer ▾** (adım raporu, klasör, çalışacak komut).
+  - Listenin altında **Bu sayfadakileri sırayla çalıştır…**: sayfadaki adımlar önerilenler
+    işaretli olarak listelenir, seçilenler sırayla çalışır.
 - **Durum şeridi:** dönen gösterge (program çalışıyorsa döner), çalışan adım ("Adım 2/8"),
   aracın **son hareket** zamanı, geçen süre, hata/uyarı sayaçları, **Durdur** (yalnız çalışırken)
   ve **Ayrıntılar** (kayıt, hatalar, son çalışma paneli). Araç 2 dk çıktı vermezse satır sarıya döner

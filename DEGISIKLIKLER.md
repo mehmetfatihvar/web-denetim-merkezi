@@ -1,5 +1,12 @@
 # Değişiklikler
 
+## 1.3 (Ekim 2026)
+
+- Her adım sayfasında **Bu sayfadakileri sırayla çalıştır…**: sayfadaki adımlar işaretli bir listede
+  gelir (önerilenler işaretli: ör. Web testi'nde tüm site testi + hatalı sayfaları yeniden test,
+  Bologna'da PostgreSQL + tüm site + istatistik), seçilenler sırayla çalışır. 8a ile 8b birlikte
+  çalışmaz; 9, 10'dan sonra çalışır.
+
 ## 1.2 (Ekim 2026)
 
 **Arayüz: daha az düğme, çalışıp çalışmadığı belli**

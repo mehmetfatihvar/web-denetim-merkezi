@@ -253,7 +253,7 @@ dikkat("Dosyaları GitHub'dan **tek tek** indirerek güncellemeyin. Program dosy
 H1("3. Arayüz");
 H2("3.1 Genel görünüm");
 P("Pencere üç bölümden oluşur: solda **menü**, sağda seçilen **sayfa**, en altta her zaman görünen **durum şeridi**. Çalışma kaydı, hatalar ve son çalışma sekmeleri şeritteki **Ayrıntılar** düğmesiyle açılan panelde durur; açıkken sayfa ile panel arasındaki çizgi sürüklenerek alanlar büyütülüp küçültülebilir.");
-P("Çalıştırmanın yalnızca iki yolu vardır: ana sayfadaki **Başlat** (sıradaki aşama) ve adım sayfalarındaki **Çalıştır** (tek adım). Başka çalıştır düğmesi, seçim kutusu ya da çift tıklama yoktur.");
+P("Çalıştırmanın üç yolu vardır: ana sayfadaki **Başlat** (sıradaki aşama), adım sayfalarındaki **Çalıştır** (tek adım) ve adım sayfalarındaki **Bu sayfadakileri sırayla çalıştır…** (o sayfanın adımları).");
 gorsel("04_siradaki.png", "Ana sayfa: Sıradaki adım kartı ve tek Başlat düğmesi; altta durum şeridi");
 
 H2("3.2 Sol menü");
@@ -292,6 +292,7 @@ gorsel("03_adim_sayfasi.png", "Web testi sayfası: adım listesi ve seçili adı
 madde([
   "**Liste sütunları:** adım adı, tahmini süre, durum. Durum; son çıktının zamanını, çalışırken canlı yüzdeyi (● %45), bitince sonucu (✓ Başarılı / ✗ Başarısız) gösterir.",
   "**Çalıştırmak:** listeden adımı seçip kartın **▶ Çalıştır** düğmesine basın. Bir çalışma sürerken düğme pasiftir.",
+  "**Sayfadakilerin hepsi:** listenin altındaki **▶▶ Bu sayfadakileri sırayla çalıştır…** sayfadaki adımları işaretli bir listede gösterir. Önerilenler işaretli gelir; aynı işi iki kez yapan ya da isteğe bağlı adımlar işaretsizdir (ör. Web testi'nde deneme testi; Bologna'da seviye tarama). İşaretleri değiştirip **Başlat**'a basın; seçilenler listedeki sırayla çalışır. Doğrula ve düzelt'te 8b etiketlemeden sonra ayrıca çalıştırılır.",
   "**Ayrıntı kartı:** adımın açıklaması, ürettiği dosyalar (✓ var / ○ yok) ve üç düğme: **▶ Çalıştır**, **Sonucu aç** (adımın ana çıktısı) ve **Diğer ▾**. Diğer menüsünde **Son adım raporu** (bkz. 7.10), **Klasörü aç** ve **Çalışacak komutu göster** (adımı çalıştırmadan hangi komutun çalışacağını kayda yazar) bulunur.",
 ]);
 
