@@ -1,5 +1,7 @@
 // Web Denetim Merkezi — Kullanım Kılavuzu (docx). Kullanım: node kilavuz.js <cikti.docx> [sayfalar.json]
 const fs = require("fs");
+// programın sürümü (merkez/__init__.py) kapağa yazılır
+const SURUM = fs.readFileSync(require("path").join(__dirname, "../../merkez/__init__.py"), "utf8").match(/SURUM = "([^"]+)"/)[1];
 const path = require("path");
 const {
   Document, Packer, Paragraph, TextRun, ImageRun, Table, TableRow, TableCell, WidthType,
@@ -703,7 +705,7 @@ const kapak = [
   new Paragraph({ alignment: AlignmentType.LEFT, spacing: { after: 400 }, children: [new TextRun({ text: "Kullanım Kılavuzu", size: 40, color: "404040" })] }),
   new Paragraph({ border: { bottom: { style: BorderStyle.SINGLE, size: 12, color: MAVI, space: 4 } }, children: [] }),
   new Paragraph({ spacing: { before: 300, after: 120 }, children: parcala("Web sitelerini baştan sona test eden ve denetleyen masaüstü programı: site keşfi, kanıtlı tarayıcı testi, belge/link/görsel denetim, yapay zekâ destekli görsel denetim, bulguların canlı doğrulanması, otomatik taşma düzeltme önerisi ve OİBS Bologna aktarımı.", { size: 24, color: "404040" }) }),
-  new Paragraph({ spacing: { before: 600 }, children: [new TextRun({ text: "Sürüm 1.1  ·  Ekim 2026", size: 22, color: "595959" })] }),
+  new Paragraph({ spacing: { before: 600 }, children: [new TextRun({ text: `Sürüm ${SURUM}  ·  Ekim 2026`, size: 22, color: "595959" })] }),
   new Paragraph({ children: [new TextRun({ text: "github.com/mehmetfatihvar/web-denetim-merkezi", size: 22, color: "595959" })] }),
   new Paragraph({ children: [new TextRun({ text: "Mersin Üniversitesi staj çalışması", size: 22, color: "595959" })] }),
 ];

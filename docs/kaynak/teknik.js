@@ -1,5 +1,7 @@
 // Web Denetim Merkezi — Teknik Doküman (docx). Kullanım: node teknik.js <cikti.docx> [sayfalar.json]
 const fs = require("fs");
+// programın sürümü (merkez/__init__.py) kapağa yazılır
+const SURUM = fs.readFileSync(require("path").join(__dirname, "../../merkez/__init__.py"), "utf8").match(/SURUM = "([^"]+)"/)[1];
 const path = require("path");
 const { belge } = require("./ortak");
 
@@ -542,6 +544,6 @@ tablo(["Terim", "Açıklama"], [
 // =================================================================== kapak ve yazdırma
 const kapak = B.kapakSayfasi("Web Denetim Merkezi", "Teknik Doküman",
   "Programın amacı, mimarisi, süreçleri, sonuçların nasıl elde edildiği ve kod haritası.",
-  ["Sürüm 1.1  ·  Ekim 2026", "github.com/mehmetfatihvar/web-denetim-merkezi", "Mersin Üniversitesi staj çalışması",
+  [`Sürüm ${SURUM}  ·  Ekim 2026`, "github.com/mehmetfatihvar/web-denetim-merkezi", "Mersin Üniversitesi staj çalışması",
    "Kullanım için bkz. Kullanım Kılavuzu (docs/KULLANIM_KILAVUZU.pdf)"]);
 B.yaz(CIKTI, SAYFALAR, "Web Denetim Merkezi — Teknik Doküman", kapak);
