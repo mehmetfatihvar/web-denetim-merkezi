@@ -1,5 +1,10 @@
 # Değişiklikler
 
+## 1.4.2 (Ekim 2026)
+
+- Ana sayfa kutularının alt yazısı dar pencerede kesilmez (satır kaydırır); yapay zekâ kutusunun
+  yazısı kısaldı ("kesin · sayfa-hata").
+
 ## 1.4.1 (Ekim 2026)
 
 - Ana sayfadaki "Yapay zekâ bulgusu" kutusu son raporla aynı sayıyı gösterir (kesin sayfa-hata çifti;

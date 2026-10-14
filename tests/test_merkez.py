@@ -605,14 +605,14 @@ class AnaSayfaTestleri(GeciciKlasor):
                                                encoding="utf-8")
         os.utime(oylama, (1000, 1000))
         kutu = {b: (d, alt) for b, d, alt, _ in kutucuklar(ayar)}
-        self.assertEqual(kutu["Yapay zekâ bulgusu"], ("3", "kesin sayfa-hata (2+ model)"))
+        self.assertEqual(kutu["Yapay zekâ bulgusu"], ("3", "kesin · sayfa-hata"))
         hakem = {r[0]: r for r in yol_haritasi(ayar)}["Yapay zekâ: hakem ve rapor"]
         self.assertTrue(hakem[2])
         # hakem yeniden çalıştı, oylama rapordan yeni: kutu ham dilim sayısına döner, aşama yalnız raporu ister
         os.utime(oylama, None)
         os.utime(k.ai_rapor / "rapor.html", (1000, 1000))
         kutu = {b: (d, alt) for b, d, alt, _ in kutucuklar(ayar)}
-        self.assertEqual(kutu["Yapay zekâ bulgusu"], ("5", "kesin dilim · rapor eski"))
+        self.assertEqual(kutu["Yapay zekâ bulgusu"], ("5", "dilim · rapor eski"))
         hakem = {r[0]: r for r in yol_haritasi(ayar)}["Yapay zekâ: hakem ve rapor"]
         self.assertFalse(hakem[2])
         self.assertEqual(hakem[4], ["ai_rapor"])

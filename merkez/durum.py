@@ -177,10 +177,10 @@ def kutucuklar(ayar: dict) -> List[Tuple[str, str, str, str]]:
     oylama = k.ai_sonuc / "oylama.csv"
     ozet = _json_oku(k.ai_rapor / "ozet.json") if ai_rapor_guncel(k) else {}
     if "kesin_sayfa_hata" in ozet:     # son raporla aynı sayı ve aynı tanım
-        kutu.append(("Yapay zekâ bulgusu", sayi(ozet["kesin_sayfa_hata"]), "kesin sayfa-hata (2+ model)", ""))
+        kutu.append(("Yapay zekâ bulgusu", sayi(ozet["kesin_sayfa_hata"]), "kesin · sayfa-hata", ""))
     elif oylama.exists():              # rapor yok ya da eski: oylamadaki ham dilim sayısı
         kesin = sum(1 for r in csv_satirlari(oylama) if r.get("karar") == "KESIN")
-        kutu.append(("Yapay zekâ bulgusu", sayi(kesin), "kesin dilim · rapor eski", ""))
+        kutu.append(("Yapay zekâ bulgusu", sayi(kesin), "dilim · rapor eski", ""))
     return kutu
 
 

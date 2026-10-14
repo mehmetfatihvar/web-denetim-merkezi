@@ -202,6 +202,13 @@ def _kisa_yol(p: Path) -> str:
         return str(p)
 
 
+def _kutu_sar(etiket, genislik):
+    """Özet kutusunun alt yazısını kutu genişliğinde kaydırır (_sar'ın 200 px alt sınırı yok)."""
+    genislik = max(int(genislik), 60)
+    if abs(int(str(etiket.cget("wraplength") or 0)) - genislik) >= 8:
+        etiket.configure(wraplength=genislik)
+
+
 def _sar(etiketler, genislik):
     """Etiketlerin satır kaydırma genişliğini ayarlar. Yalnızca belirgin değişimde yazar:
     her piksel değişiminde yazmak yeniden yerleşime, o da yeni <Configure> olayına yol açar
@@ -616,10 +623,16 @@ class Uygulama:
             kutu = ttk.Frame(self.kutu_cercevesi, style="Card.TFrame", padding=(16, 12))
             kutu.grid(row=0, column=i, sticky="nsew", padx=(0 if i == 0 else 10, 0))
             self.kutu_cercevesi.columnconfigure(i, weight=1, uniform="kutu")
-            ttk.Label(kutu, text=baslik, style="Soluk.TLabel").pack(anchor="w")
+            baslik_etiket = ttk.Label(kutu, text=baslik, style="Soluk.TLabel", justify="left")
+            baslik_etiket.pack(anchor="w")
             stil = {"vurgu": "SayiVurgu.TLabel", "hata": "SayiHata.TLabel"}.get(vurgu, "Sayi.TLabel")
             ttk.Label(kutu, text=deger, style=stil).pack(anchor="w")
-            ttk.Label(kutu, text=alt, style="Soluk.TLabel").pack(anchor="w")
+            alt_etiket = ttk.Label(kutu, text=alt, style="Soluk.TLabel", justify="left")
+            alt_etiket.pack(anchor="w")
+            kutu.bind("<Configure>", lambda e, ls=(baslik_etiket, alt_etiket):   # dar kutuda kesilmesin
+                      [_kutu_sar(l, e.width - 32) for l in ls])
+            for l in (baslik_etiket, alt_etiket):    # kutu genişliğini yazı değil ızgara belirlesin
+                l.configure(wraplength=60)
 
         yol = veri["yol"]
         onerilen = next((i for i, a in enumerate(yol) if not a[2]), None)
