@@ -278,7 +278,7 @@ tablo(["Sonuç", "Nasıl elde ediliyor", "Dosya", "Yorum / güven"], [
   ["Sorunlu belge", "Belge bayrağı ≠ erisilebilir", "`documents_audit.csv`", "Yerel dosya yolu bulgusu kesindir."],
   ["Görsel kusur", "Şablon temsilcilerinde DOM ölçümü", "`gorsel_denetim.csv`", "Tutucu: görünür bozukluk şartı; şablon başına."],
   ["Piksel bayrakları", "Bütün görüntülerin kodla ölçümü", "`tarama.csv`", "TASMA kesin ölçümdür; AYNI_GORUNUM şüphedir."],
-  ["Yapay zekâ bulgusu (KESİN)", "2+ model aynı dilimde aynı tür", "`oylama.csv`", "Tür başına isabet `isabet.txt`'te; canlı doğrulamaya gider."],
+  ["Yapay zekâ bulgusu (KESİN)", "2+ model aynı dilimde aynı tür; raporda ve ana sayfada sayfa-hata çifti olarak sayılır", "`oylama.csv` → `rapor/ozet.json`", "Tür başına isabet `isabet.txt`'te; canlı doğrulamaya gider."],
   ["İsabet oranı", "Hakem onayı / piksel ölçümüyle karşılaştırma", "`isabet.txt`", "Hakem onayı alt sınırdır: iki model aynı hatayı yapabilir."],
   ["Metin kodlama bulgusu", "Görünen metinde düzenli ifade kalıpları", "`metin_kontrol.csv`", "Kesin eşleşme; adres içindeki `?` elenir."],
   ["DOĞRULANDI / GÖRÜLMEDİ", "Canlı DOM ölçümü", "`sonuc.csv`", "Bulgunun bugün de var olup olmadığı."],

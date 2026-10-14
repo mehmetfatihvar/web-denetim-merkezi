@@ -1,5 +1,12 @@
 # Değişiklikler
 
+## 1.4.1 (Ekim 2026)
+
+- Ana sayfadaki "Yapay zekâ bulgusu" kutusu son raporla aynı sayıyı gösterir (kesin sayfa-hata çifti;
+  rapor `ozet.json` yazar). Önceden oylama.csv'deki bütün kesin dilimleri sayıyordu (ör. 172 / raporda 94).
+- Hakem yeniden çalışıp son rapor eskidiyse yol haritası "hakem ve rapor" aşamasını tamam saymaz;
+  Başlat yalnız raporu yeniden üretir. Kutu o arada ham dilim sayısını "rapor eski" notuyla gösterir.
+
 ## 1.4 (Ekim 2026)
 
 - **Kalanları da sırayla çalıştır** etiketlemede durmaz: 8a'yı (etiketleme sayfası) oluşturur, sizi

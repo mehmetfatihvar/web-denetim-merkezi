@@ -590,6 +590,33 @@ class AnaSayfaTestleri(GeciciKlasor):
         ilk = {r[0]: r for r in yol_haritasi(ayar)}["Yapay zekâ: ilk model"]
         self.assertTrue(ilk[2])                          # yapılamayan 5 dilim hakeme gider
 
+    def test_yapay_zeka_kutusu_ve_eski_rapor(self):
+        """Ana sayfa kutusu son raporla aynı sayıyı (sayfa-hata) gösterir; hakemden eski rapor tamam sayılmaz."""
+        from merkez.ayarlar import Klasorler
+        from merkez.durum import kutucuklar, yol_haritasi
+        ayar = dict(A.VARSAYILAN, cikti_koku=str(self.t / "cikti"), harita=str(self.t / "yok.json"))
+        k = Klasorler(ayar)
+        k.ai_sonuc.mkdir(parents=True)
+        k.ai_rapor.mkdir(parents=True)
+        oylama = k.ai_sonuc / "oylama.csv"
+        oylama.write_text("karar,oy,dosya,dilim,tur\n" + "KESIN,2,a.png,1,overlap\n" * 5, encoding="utf-8")
+        (k.ai_rapor / "rapor.html").write_text("x", encoding="utf-8")
+        (k.ai_rapor / "ozet.json").write_text(json.dumps({"kesin_sayfa_hata": 3, "kesin_dilim": 4}),
+                                               encoding="utf-8")
+        os.utime(oylama, (1000, 1000))
+        kutu = {b: (d, alt) for b, d, alt, _ in kutucuklar(ayar)}
+        self.assertEqual(kutu["Yapay zekâ bulgusu"], ("3", "kesin sayfa-hata (2+ model)"))
+        hakem = {r[0]: r for r in yol_haritasi(ayar)}["Yapay zekâ: hakem ve rapor"]
+        self.assertTrue(hakem[2])
+        # hakem yeniden çalıştı, oylama rapordan yeni: kutu ham dilim sayısına döner, aşama yalnız raporu ister
+        os.utime(oylama, None)
+        os.utime(k.ai_rapor / "rapor.html", (1000, 1000))
+        kutu = {b: (d, alt) for b, d, alt, _ in kutucuklar(ayar)}
+        self.assertEqual(kutu["Yapay zekâ bulgusu"], ("5", "kesin dilim · rapor eski"))
+        hakem = {r[0]: r for r in yol_haritasi(ayar)}["Yapay zekâ: hakem ve rapor"]
+        self.assertFalse(hakem[2])
+        self.assertEqual(hakem[4], ["ai_rapor"])
+
 
 class SozlesmeTestleri(unittest.TestCase):
     """Programın araçlara gönderdiği her seçenek, aracın kodunda tanımlı olmalı. Araçlar

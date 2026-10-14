@@ -175,10 +175,21 @@ def kutucuklar(ayar: dict) -> List[Tuple[str, str, str, str]]:
     if gorsel.exists():
         kutu.append(("Görsel kusur", sayi(len(csv_satirlari(gorsel))), "şablon temsilcilerinde", ""))
     oylama = k.ai_sonuc / "oylama.csv"
-    if oylama.exists():
+    ozet = _json_oku(k.ai_rapor / "ozet.json") if ai_rapor_guncel(k) else {}
+    if "kesin_sayfa_hata" in ozet:     # son raporla aynı sayı ve aynı tanım
+        kutu.append(("Yapay zekâ bulgusu", sayi(ozet["kesin_sayfa_hata"]), "kesin sayfa-hata (2+ model)", ""))
+    elif oylama.exists():              # rapor yok ya da eski: oylamadaki ham dilim sayısı
         kesin = sum(1 for r in csv_satirlari(oylama) if r.get("karar") == "KESIN")
-        kutu.append(("Yapay zekâ bulgusu", sayi(kesin), "kesin (2+ model)", ""))
+        kutu.append(("Yapay zekâ bulgusu", sayi(kesin), "kesin dilim · rapor eski", ""))
     return kutu
+
+
+def ai_rapor_guncel(k) -> bool:
+    """Son rapor, hakem/oylama sonuçlarından sonra mı üretildi? (hakem yeniden çalışınca rapor eskir)"""
+    rapor, oylama = k.ai_rapor / "rapor.html", k.ai_sonuc / "oylama.csv"
+    if not rapor.exists():
+        return False
+    return not oylama.exists() or rapor.stat().st_mtime >= oylama.stat().st_mtime
 
 
 def _var(adim_id: str, ayar: dict) -> bool:
@@ -216,6 +227,14 @@ def _kapsam_durumu(k, anahtar):
     return tamam, "; ".join(parca)
 
 
+def _hakem_ve_rapor(k, ayar):
+    """Hakem tamam ve son rapor hakemden sonra üretilmişse tamam. Rapor eskiyse yalnız rapor yeniden üretilir."""
+    hakem_tamam, ayrinti = _kapsam_durumu(k, "hakem")
+    if hakem_tamam is not False and _var("ai_rapor", ayar) and not ai_rapor_guncel(k):
+        return False, "rapor hakem sonuçlarından eski; yeniden üretilecek", ["ai_rapor"]
+    return _var("ai_rapor", ayar) and hakem_tamam is not False, ayrinti
+
+
 def yol_haritasi(ayar: dict):
     """Önerilen iş sırası: (başlık, açıklama, tamam mı, ayrıntı, çalıştırılacak adımlar)."""
     k = Klasorler(ayar)
@@ -237,8 +256,7 @@ def yol_haritasi(ayar: dict):
          ["ai_analiz"], lambda: _kapsam_durumu(k, "ilk_model")),
         ("Yapay zekâ: hakem ve rapor", "Şüpheli ve ilk modelin bakamadığı dilimler hakeme gider, "
          "son rapor üretilir.", ["ai_hakem", "ai_isabet", "ai_metin", "ai_rapor"],
-         lambda: (_var("ai_rapor", ayar) and _kapsam_durumu(k, "hakem")[0] is not False,
-                  _kapsam_durumu(k, "hakem")[1])),
+         lambda: _hakem_ve_rapor(k, ayar)),
         ("Canlı doğrulama", "Bulgular canlı sitede yeniden ölçülür: gerçek mi, yanlış alarm mı? (7)",
          ["gd_dogrulama"], None),
         ("Elle etiketleme: sayfa", "Sayfayı açıp bulguları 1/2/3 ile işaretleyin, 'CSV indir'e basın. (8a)", ["gd_etiket"], None),
@@ -253,7 +271,9 @@ def yol_haritasi(ayar: dict):
     for baslik, aciklama, ids, kontrol in asamalar:
         eksik = [i for i in ids if not _var(i, ayar) and ADIM_SOZLUK[i].ciktilar(ayar)]
         if kontrol:
-            tamam, ayrinti = kontrol()
+            tamam, ayrinti, *ozel = kontrol()     # kontrol çalışacak adımları da belirtebilir
+            if ozel:
+                eksik = ozel[0]
         else:
             tamam = not eksik
             ayrinti = f"{len(ids) - len(eksik)}/{len(ids)} adım" if eksik and len(eksik) < len(ids) else ""

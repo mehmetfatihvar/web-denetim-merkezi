@@ -315,6 +315,11 @@ görünebilir; bu bir ekran görüntüsü sınırlamasıdır.</li>
 </main></body></html>""")
 
     (cikti / "rapor.html").write_text("\n".join(H), encoding="utf-8")
+    # Merkez'in ana sayfası "Yapay zekâ bulgusu" kutusunu rapordaki sayıyla aynı göstersin diye
+    (cikti / "ozet.json").write_text(json.dumps({
+        "tarih": date.today().isoformat(), "kesin_sayfa_hata": len(gruplu), "kesin_dilim": len(kesin),
+        "tasma": len(tasan), "http": len(http_hata), "metin_sayfa": len({r['url'] for r in metin}),
+    }, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"✅ Rapor: {(cikti / 'rapor.html').resolve()}")
     print(f"   KESİN: {len(gruplu)} sayfa-hata ({len(kesin)} dilim) | tek model (güvenilir tür): {len(tek)} | "
           f"taşma: {len(tasan)} | HTTP: {len(http_hata)} | metin: {len({r['url'] for r in metin})} sayfa")

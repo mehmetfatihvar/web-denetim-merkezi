@@ -282,7 +282,7 @@ P("Hata olunca sonraki adımlarla sürdürmek isterseniz **Ayarlar > Genel > Hat
 H2("3.4 Ana sayfa");
 gorsel("02_ana_sayfa.png", "Ana sayfa: özet kutucukları, yol haritası ve rapor kısayolları");
 madde([
-  "**Özet kutucukları:** site haritasındaki sayfa sayısı, test edilen sayfa ve kapsam, kırık sayfa (4xx/5xx), kırık bağlantı, görsel kusur, kesin yapay zekâ bulgusu. Yalnızca üretilmiş çıktılar için kutucuk görünür.",
+  "**Özet kutucukları:** site haritasındaki sayfa sayısı, test edilen sayfa ve kapsam, kırık sayfa (4xx/5xx), kırık bağlantı, görsel kusur, kesin yapay zekâ bulgusu (son rapordaki sayının aynısı: iki modelin bulduğu sayfa-hata çifti; rapor hakemden eskiyse ham dilim sayısı ve \"rapor eski\" yazar, yol haritası da raporu yeniden üretmeyi önerir). Yalnızca üretilmiş çıktılar için kutucuk görünür.",
   "**Sıradaki adım kartı:** en üstte, yol haritasında henüz yapılmamış ilk aşama ve ne yaptığı yazar. **▶ Başlat** onu çalıştırır (bir aşama yarım kalmışsa, ör. \"2/4 adım\", yalnız eksik adımlar çalışır). **Kalanları da sırayla çalıştır** sonraki aşamaları da arka arkaya çalıştırır; başlamadan listeyi ve sizin yapmanız gerekenleri gösterip onay ister. Etiketlemede durmaz: etiketleme sayfasını (8a) oluşturur, sizi bekleyen 8b'yi atlayıp taşma düzeltme ve teslimle devam eder; sonunda etiketleme sayfasını açmayı önerir.",
   "**Yol haritası:** önerilen iş sırası. Tamamlanan aşamalar ✓, sıradaki ▶ ile işaretlidir. Bir satıra tıklamak o aşamanın adım sayfasını açar.",
   "**Raporlar:** yalnız üretilmiş raporların kısayolları görünür.",
